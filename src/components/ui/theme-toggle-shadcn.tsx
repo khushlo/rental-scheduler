@@ -35,7 +35,7 @@ export function ModeToggle() {
           {isDark ? (
             <Sun className="h-[1.2rem] w-[1.2rem] text-yellow-500" />
           ) : (
-            <Moon className="h-[1.2rem] w-[1.2rem] text-white" />
+            <Moon className="h-[1.2rem] w-[1.2rem] text-gray-900" />
           )}
           <span className="sr-only">Toggle theme</span>
         </Button>
@@ -74,14 +74,14 @@ export function SimpleToggle() {
     <Button
       variant="outline"
       size="icon"
-      onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+      onClick={() => setTheme(isDark ? "light" : "dark")}
     >
       {/* Show Sun icon when in dark mode (to switch to light) */}
       {/* Show Moon icon when in light mode (to switch to dark) */}
       {isDark ? (
         <Sun className="h-[1.2rem] w-[1.2rem] text-yellow-500" />
       ) : (
-        <Moon className="h-[1.2rem] w-[1.2rem] text-white" />
+        <Moon className="h-[1.2rem] w-[1.2rem] text-gray-900" />
       )}
       <span className="sr-only">Toggle theme</span>
     </Button>

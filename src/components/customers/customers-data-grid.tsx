@@ -154,8 +154,8 @@ export function CustomersDataGrid() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-black dark:text-white">Customers</h1>
-          <p className="text-black dark:text-gray-400">Manage your customer database and contact information</p>
+          <h1 className="text-2xl font-bold text-black dark:text-gray-100">Customers</h1>
+          <p className="text-gray-800 dark:text-gray-400">Manage your customer database and contact information</p>
         </div>
         <AddCustomerForm onCustomerAdded={fetchCustomers} />
       </div>

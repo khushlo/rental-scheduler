@@ -68,7 +68,7 @@ export function ProductsDataGrid() {
       width: '18%',
       render: (product) => (
         <code className="text-sm bg-gray-100 px-3 py-2 rounded font-mono">
-          {formatId(product.id, 8)}
+          {formatId(product.id)}
         </code>
       )
     },

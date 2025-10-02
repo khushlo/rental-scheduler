@@ -6,7 +6,7 @@ export default function Home() {
     <div className="container mx-auto px-4 py-6">
       <div className="space-y-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100" style={{color: 'inherit'}}>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             Rental Management Dashboard
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
