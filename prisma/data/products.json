@@ -1,0 +1,62 @@
+[
+  {
+    "name": "Chhab - 3 Round",
+    "quantity": 7,
+    "rentPrice": 150,
+    "status": true
+  },
+  {
+    "name": "Chhab - Golden set",
+    "quantity": 7,
+    "rentPrice": 150,
+    "status": true
+  },
+  {
+    "name": "Chhab - Pink Set",
+    "quantity": 7,
+    "rentPrice": 150,
+    "status": true
+  },
+  {
+    "name": "Chhab - Blue Set",
+    "quantity": 7,
+    "rentPrice": 150,
+    "status": true
+  },
+  {
+    "name": "Chhab - Rajwadi",
+    "quantity": 7,
+    "rentPrice": 150,
+    "status": true
+  },
+  {
+    "name": "Kankupagla tray",
+    "quantity": 1,
+    "rentPrice": 200,
+    "status": true
+  },
+  {
+    "name": "Mold - Hand",
+    "quantity": 6,
+    "rentPrice": 0,
+    "status": true
+  },
+  {
+    "name": "Mold - Legs",
+    "quantity": 8,
+    "rentPrice": 0,
+    "status": true
+  },
+  {
+    "name": "Mold - Bracelet",
+    "quantity": 4,
+    "rentPrice": 0,
+    "status": true
+  },
+  {
+    "name": "Dhingli",
+    "quantity": 7,
+    "rentPrice": 0,
+    "status": true
+  }
+]

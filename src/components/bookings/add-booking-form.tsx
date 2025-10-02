@@ -59,6 +59,19 @@ interface BookingItem {
   notes?: string;
 }
 
+interface AvailabilityError {
+  message: string;
+  conflictingBookings: {
+    id: number;
+    customer: string;
+    quantity: number;
+  }[];
+}
+
+interface ItemAvailability {
+  [itemIndex: number]: AvailabilityError | null;
+}
+
 interface Booking {
   id?: number;
   startDate: string;
@@ -100,6 +113,8 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
   });
   const [expandedNotes, setExpandedNotes] = useState<Set<number>>(new Set());
   const [products, setProducts] = useState<Product[]>([]);
+  const [itemAvailability, setItemAvailability] = useState<ItemAvailability>({});
+  const [validationTimeout, setValidationTimeout] = useState<NodeJS.Timeout | null>(null);
   const [formData, setFormData] = useState<Booking>({
     startDate: booking?.startDate || new Date().toISOString().split('T')[0],
     endDate: booking?.endDate || new Date().toISOString().split('T')[0],
@@ -116,13 +131,42 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
   useEffect(() => {
     fetchProducts();
     
-    // Cleanup search timeout on unmount
+    // Cleanup timeouts on unmount
     return () => {
       if (searchTimeout) {
         clearTimeout(searchTimeout);
       }
+      if (validationTimeout) {
+        clearTimeout(validationTimeout);
+      }
     };
-  }, [searchTimeout]);
+  }, [searchTimeout, validationTimeout]);
+
+  // Validate items when component loads in edit mode
+  useEffect(() => {
+    if (mode === 'edit' && formData.items.length > 0) {
+      // Delay validation slightly to ensure products are loaded
+      setTimeout(() => {
+        validateAllItems();
+      }, 1000);
+    }
+  }, [mode, products]);
+
+  const handleDateChange = (field: 'startDate' | 'endDate', value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear existing timeout
+    if (validationTimeout) {
+      clearTimeout(validationTimeout);
+    }
+    
+    // Set new timeout for debounced validation
+    const newTimeout = setTimeout(() => {
+      validateAllItems();
+    }, 500);
+    
+    setValidationTimeout(newTimeout);
+  };
 
   const fetchProducts = async () => {
     try {
@@ -134,6 +178,50 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
     } catch (error) {
       console.error('Error fetching products:', error);
     }
+  };
+
+  const checkItemAvailability = async (itemIndex: number, productId: number, quantity: number) => {
+    if (!productId || !quantity || !formData.startDate || !formData.endDate) {
+      setItemAvailability(prev => ({ ...prev, [itemIndex]: null }));
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/availability?productId=${productId}&startDate=${formData.startDate}&endDate=${formData.endDate}&quantity=${quantity}`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (!data.available) {
+          const conflictingBookings = data.conflictingBookings || [];
+          setItemAvailability(prev => ({
+            ...prev,
+            [itemIndex]: {
+              message: data.reason || 'Item not available for selected dates',
+              conflictingBookings: conflictingBookings.map((booking: any) => ({
+                id: booking.id,
+                customer: booking.customer,
+                quantity: booking.quantity
+              }))
+            }
+          }));
+        } else {
+          setItemAvailability(prev => ({ ...prev, [itemIndex]: null }));
+        }
+      }
+    } catch (error) {
+      console.error('Error checking availability:', error);
+    }
+  };
+
+  const validateAllItems = () => {
+    formData.items.forEach((item, index) => {
+      if (item.productId && item.quantity) {
+        checkItemAvailability(index, item.productId, item.quantity);
+      }
+    });
   };
 
   const searchCustomers = async (searchTerm: string) => {
@@ -243,6 +331,7 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
   };
 
   const addBookingItem = () => {
+    const newIndex = formData.items.length;
     setFormData(prev => ({
       ...prev,
       items: [...prev.items, {
@@ -253,6 +342,9 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
         notes: ''
       }]
     }));
+    
+    // Clear any existing availability error for the new item
+    setItemAvailability(prev => ({ ...prev, [newIndex]: null }));
   };
 
   const updateBookingItem = (index: number, field: keyof BookingItem, value: any) => {
@@ -292,6 +384,29 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
       
       return { ...prev, items: newItems };
     });
+
+    // Trigger availability validation for productId or quantity changes
+    if (field === 'productId' || field === 'quantity') {
+      // Clear existing timeout
+      if (validationTimeout) {
+        clearTimeout(validationTimeout);
+      }
+      
+      // Set new timeout for debounced validation
+      const newTimeout = setTimeout(() => {
+        const item = formData.items[index];
+        const productId = field === 'productId' ? value : item.productId;
+        const quantity = field === 'quantity' ? value : item.quantity;
+        
+        if (productId && quantity && quantity > 0) {
+          checkItemAvailability(index, productId, quantity);
+        } else {
+          setItemAvailability(prev => ({ ...prev, [index]: null }));
+        }
+      }, 500);
+      
+      setValidationTimeout(newTimeout);
+    }
   };
 
   const removeBookingItem = (index: number) => {
@@ -299,6 +414,23 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
       ...prev,
       items: prev.items.filter((_, i) => i !== index)
     }));
+    
+    // Clean up availability state for removed item and reindex remaining items
+    setItemAvailability(prev => {
+      const newAvailability: ItemAvailability = {};
+      Object.entries(prev).forEach(([key, value]) => {
+        const itemIndex = parseInt(key);
+        if (itemIndex < index) {
+          // Keep items before the removed index as is
+          newAvailability[itemIndex] = value;
+        } else if (itemIndex > index) {
+          // Shift items after the removed index down by 1
+          newAvailability[itemIndex - 1] = value;
+        }
+        // Skip the removed item (itemIndex === index)
+      });
+      return newAvailability;
+    });
   };
 
   const calculateTotal = () => {
@@ -318,6 +450,13 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
     setError(null);
 
     try {
+      // Check for availability errors
+      const hasAvailabilityErrors = Object.values(itemAvailability).some(error => error !== null);
+      if (hasAvailabilityErrors) {
+        setError('Please resolve availability conflicts before submitting the booking.');
+        return;
+      }
+
       // Create customer if one doesn't exist
       let customerId = selectedCustomer?.id;
       
@@ -480,7 +619,7 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
                   <input
                     type="date"
                     value={formData.startDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                    onChange={(e) => handleDateChange('startDate', e.target.value)}
                     disabled={isSubmitting}
                     className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
                   />
@@ -492,7 +631,7 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
                   <input
                     type="date"
                     value={formData.endDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                    onChange={(e) => handleDateChange('endDate', e.target.value)}
                     disabled={isSubmitting}
                     className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
                   />
@@ -566,6 +705,42 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
                         ))}
                       </select>
                     </div>
+                    
+                    {/* Availability Error Display */}
+                    {itemAvailability[index] && (
+                      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3">
+                        <div className="flex items-start">
+                          <div className="flex-shrink-0">
+                            <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                          <div className="ml-3">
+                            <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
+                              Item Not Available
+                            </h3>
+                            <div className="mt-1 text-sm text-red-700 dark:text-red-300">
+                              <p>{itemAvailability[index]?.message}</p>
+                              {itemAvailability[index]?.conflictingBookings.length > 0 && (
+                                <div className="mt-2">
+                                  <p className="font-medium">Conflicting with bookings:</p>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {itemAvailability[index]?.conflictingBookings.map((booking, bookingIndex) => (
+                                      <span 
+                                        key={bookingIndex} 
+                                        className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-600"
+                                      >
+                                        #{booking.id} ({booking.customer} - {booking.quantity} units)
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     
                     {/* Quantity, Price/Day, and Subtotal Row */}
                     <div className="flex items-end gap-2">
