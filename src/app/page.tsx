@@ -1,7 +1,52 @@
+'use client';
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Calendar, Package, Users, Clock, TrendingUp, AlertTriangle } from 'lucide-react'
 
+interface DashboardStats {
+  totalCustomers: number;
+  activeBookings: number;
+  completedBookings: number;
+  confirmedBookings: number;
+  monthlyRevenue: number;
+}
+
 export default function Home() {
+  const [stats, setStats] = useState<DashboardStats>({
+    totalCustomers: 0,
+    activeBookings: 0,
+    completedBookings: 0,
+    confirmedBookings: 0,
+    monthlyRevenue: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch('/api/dashboard');
+        if (response.ok) {
+          const data = await response.json();
+          setStats(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch dashboard stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR'
+    }).format(amount);
+  };
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="space-y-8">
@@ -19,11 +64,13 @@ export default function Home() {
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <Package className="h-6 w-6 text-blue-600" />
+                <Calendar className="h-6 w-6 text-blue-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Products</p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">0</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Completed Bookings</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                  {loading ? '...' : stats.completedBookings}
+                </p>
               </div>
             </div>
           </div>
@@ -31,11 +78,13 @@ export default function Home() {
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <Users className="h-6 w-6 text-green-600" />
+                <Calendar className="h-6 w-6 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Customers</p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">0</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Confirmed Bookings</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                  {loading ? '...' : stats.confirmedBookings}
+                </p>
               </div>
             </div>
           </div>
@@ -47,7 +96,9 @@ export default function Home() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Active Bookings</p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">0</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                  {loading ? '...' : stats.activeBookings}
+                </p>
               </div>
             </div>
           </div>
@@ -59,8 +110,25 @@ export default function Home() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Monthly Revenue</p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">$0</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                  {loading ? '...' : formatCurrency(stats.monthlyRevenue)}
+                </p>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Total Customers - Separate Row */}
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <Users className="h-6 w-6 text-indigo-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Customers</p>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                {loading ? '...' : stats.totalCustomers}
+              </p>
             </div>
           </div>
         </div>

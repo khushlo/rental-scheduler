@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, X, UserPlus } from 'lucide-react';
+import { Plus, X, UserPlus, MessageSquare } from 'lucide-react';
 
 interface AddBookingFormProps {
   onBookingAdded: () => void;
@@ -98,6 +98,7 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
     phone2: '',
     address: ''
   });
+  const [expandedNotes, setExpandedNotes] = useState<Set<number>>(new Set());
   const [products, setProducts] = useState<Product[]>([]);
   const [formData, setFormData] = useState<Booking>({
     startDate: booking?.startDate || new Date().toISOString().split('T')[0],
@@ -189,6 +190,22 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
     setCustomerSearchTerm(customer.name);
     setCustomerSuggestions([]);
     setFormData(prev => ({ ...prev, customerId: customer.id }));
+  };
+
+  const toggleNoteExpansion = (index: number) => {
+    setExpandedNotes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
+  const hasNoteContent = (index: number) => {
+    return formData.items[index]?.notes && formData.items[index].notes.trim() !== '';
   };
 
   const createNewCustomer = async () => {
@@ -362,47 +379,48 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-7xl max-h-[98vh] sm:max-h-[95vh] overflow-y-auto">
+        {/* Header - Now scrollable */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100">
               {mode === 'add' ? 'Create New Booking' : 'Edit Booking'}
             </h2>
             <button
               onClick={onClose}
               disabled={isSubmitting}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50"
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50 p-1"
             >
               <X size={20} />
             </button>
           </div>
 
-          {/* Customer Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Customer Section - Stack on mobile */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Customer <span className="text-red-500">*</span>
                 </label>
-                <div className="relative flex gap-2">
+                <div className="relative flex flex-col sm:flex-row gap-2">
                   <input
                     type="text"
                     value={customerSearchTerm}
                     onChange={(e) => handleCustomerSearch(e.target.value)}
                     placeholder="Search or enter customer name"
                     disabled={isSubmitting}
-                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
+                    className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
                   />
                   <button
                     type="button"
                     onClick={() => setIsNewCustomerModalOpen(true)}
                     disabled={isSubmitting}
-                    className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1"
+                    className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1 min-w-0"
                     title="Add New Customer"
                   >
                     <UserPlus size={16} />
+                    <span className="hidden sm:inline">Add</span>
                   </button>
                   {isSearching && customerSearchTerm.length >= 2 && (
                     <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg top-full left-0">
@@ -451,9 +469,10 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
               </div>
             </div>
 
-            {/* Rental Period */}
+            {/* Rental Period - Better mobile layout */}
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              {/* Dates Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Start Date <span className="text-red-500">*</span>
@@ -463,7 +482,7 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
                     value={formData.startDate}
                     onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
                     disabled={isSubmitting}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
                   />
                 </div>
                 <div>
@@ -475,11 +494,13 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
                     value={formData.endDate}
                     onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
                     disabled={isSubmitting}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              
+              {/* Times Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Start Time
@@ -489,7 +510,7 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
                     value={formData.startTime}
                     onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
                     disabled={isSubmitting}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
                   />
                 </div>
                 <div>
@@ -501,7 +522,7 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
                     value={formData.endTime}
                     onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
                     disabled={isSubmitting}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -509,32 +530,25 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-6">
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm">
               {error}
             </div>
           )}
 
           {/* Products Section */}
           <div>
-            <div className="flex justify-between items-center mb-4">
+            <div className="mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Rental Items</h3>
-              <button
-                type="button"
-                onClick={addBookingItem}
-                disabled={isSubmitting}
-                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
-              >
-                Add Item
-              </button>
             </div>
 
             <div className="space-y-4">
               {formData.items.map((item, index) => (
-                <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <div className="md:col-span-2">
+                <div key={index} className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                  <div className="grid grid-cols-1 gap-4">
+                    {/* Product Selection - Full width on mobile */}
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Product <span className="text-red-500">*</span>
                       </label>
@@ -542,7 +556,7 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
                         value={item.productId}
                         onChange={(e) => updateBookingItem(index, 'productId', parseInt(e.target.value))}
                         disabled={isSubmitting}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
+                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
                       >
                         <option value={0}>Select a product</option>
                         {products.map((product) => (
@@ -553,96 +567,170 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
                       </select>
                     </div>
                     
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Quantity <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => updateBookingItem(index, 'quantity', parseInt(e.target.value) || 1)}
-                        disabled={isSubmitting}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Price/Day
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.pricePerDay}
-                        onChange={(e) => updateBookingItem(index, 'pricePerDay', parseFloat(e.target.value) || 0)}
-                        disabled={isSubmitting}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
-                        placeholder="Manual price"
-                        title="Enter custom price per day (overrides product default)"
-                      />
-                    </div>
-                    
-                    <div className="flex items-end">
-                      <div className="flex-1 mr-2">
+                    {/* Quantity, Price/Day, and Subtotal Row */}
+                    <div className="flex items-end gap-2">
+                      <div className="flex-[0.3]">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Quantity <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={item.quantity === 0 ? '' : item.quantity.toString()}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === '' || /^[0-9]+$/.test(value)) {
+                              updateBookingItem(index, 'quantity', value === '' ? 0 : parseInt(value));
+                            }
+                          }}
+                          onBlur={(e) => {
+                            if (e.target.value === '') {
+                              updateBookingItem(index, 'quantity', 1);
+                            }
+                          }}
+                          disabled={isSubmitting}
+                          placeholder="1"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
+                        />
+                      </div>
+                      
+                      <div className="flex-[0.3]">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Price/Day
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          pattern="[0-9]*[.]?[0-9]*"
+                          value={item.pricePerDay === 0 ? '' : item.pricePerDay.toString()}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                              updateBookingItem(index, 'pricePerDay', value === '' ? 0 : parseFloat(value) || 0);
+                            }
+                          }}
+                          disabled={isSubmitting}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
+                          placeholder="Custom price"
+                          title="Enter custom price per day (overrides product default)"
+                        />
+                      </div>
+                      
+                      <div className="flex-[0.4]">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Subtotal
                         </label>
                         <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={item.subtotal}
-                          onChange={(e) => updateBookingItem(index, 'subtotal', parseFloat(e.target.value) || 0)}
+                          type="text"
+                          inputMode="decimal"
+                          pattern="[0-9]*[.]?[0-9]*"
+                          value={item.subtotal === 0 ? '' : item.subtotal.toString()}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                              updateBookingItem(index, 'subtotal', value === '' ? 0 : parseFloat(value) || 0);
+                            }
+                          }}
                           disabled={isSubmitting}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
-                          placeholder="Manual subtotal"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
+                          placeholder="Custom subtotal"
                           title="Enter custom subtotal (overrides auto-calculated value)"
                         />
                       </div>
+                      
                       <button
                         type="button"
                         onClick={() => removeBookingItem(index)}
                         disabled={isSubmitting}
-                        className="bg-red-600 hover:bg-red-700 text-white p-2 rounded disabled:opacity-50"
+                        className="bg-red-600 hover:bg-red-700 text-white p-2 rounded disabled:opacity-50 flex items-center justify-center flex-shrink-0"
                         title="Remove item"
                       >
                         <X size={16} />
                       </button>
                     </div>
+                    
+                    {/* Item Notes - Expandable */}
+                    {item.productId > 0 && (
+                      <div>
+                        {!expandedNotes.has(index) ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleNoteExpansion(index)}
+                            className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                              hasNoteContent(index)
+                                ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600 text-blue-700 dark:text-blue-300'
+                                : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
+                            }`}
+                            disabled={isSubmitting}
+                          >
+                            <MessageSquare size={16} />
+                            {hasNoteContent(index) ? 'Edit Note' : 'Add Note'}
+                            {hasNoteContent(index) && (
+                              <span className="text-xs font-medium">
+                                ({item.notes?.length} chars)
+                              </span>
+                            )}
+                          </button>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Item Notes
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => toggleNoteExpansion(index)}
+                                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
+                                disabled={isSubmitting}
+                                title="Collapse notes"
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                            <input
+                              type="text"
+                              value={item.notes || ''}
+                              onChange={(e) => updateBookingItem(index, 'notes', e.target.value)}
+                              disabled={isSubmitting}
+                              placeholder="Any special notes for this item"
+                              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
+                              autoFocus
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  
-                  {item.productId > 0 && (
-                    <div className="mt-3">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Item Notes
-                      </label>
-                      <input
-                        type="text"
-                        value={item.notes || ''}
-                        onChange={(e) => updateBookingItem(index, 'notes', e.target.value)}
-                        disabled={isSubmitting}
-                        placeholder="Any special notes for this item"
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
-                      />
-                    </div>
-                  )}
                 </div>
               ))}
 
               {formData.items.length === 0 && (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">
                   No items added yet. Click "Add Item" to get started.
                 </div>
               )}
+              
+              {/* Add Item Button */}
+              <div className="flex justify-center pt-4">
+                <button
+                  type="button"
+                  onClick={addBookingItem}
+                  disabled={isSubmitting}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50 flex items-center gap-2"
+                >
+                  <Plus size={16} />
+                  Add Item
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Footer Section */}
+          {/* Footer Section - Mobile optimized */}
           <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-2">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Notes Section */}
+              <div className="lg:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Booking Notes
                 </label>
@@ -652,23 +740,29 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
                   disabled={isSubmitting}
                   rows={3}
                   placeholder="Any additional notes or special instructions"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50 resize-none"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50 resize-none"
                 />
               </div>
               
+              {/* Amount Section */}
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Advance Payment
                   </label>
                   <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.advancePayment}
-                    onChange={(e) => setFormData(prev => ({ ...prev, advancePayment: parseFloat(e.target.value) || 0 }))}
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*[.]?[0-9]*"
+                    value={formData.advancePayment === 0 ? '' : formData.advancePayment.toString()}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                        setFormData(prev => ({ ...prev, advancePayment: value === '' ? 0 : parseFloat(value) || 0 }));
+                      }
+                    }}
                     disabled={isSubmitting}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
                     placeholder="0.00"
                   />
                 </div>
@@ -677,8 +771,8 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Total Amount
                   </label>
-                  <div className="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-700 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                  <div className="px-3 py-3 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-700 rounded-lg">
+                    <div className="text-xl sm:text-2xl font-bold text-blue-900 dark:text-blue-100">
                       ₹{formData.totalAmount.toFixed(2)}
                     </div>
                     {formData.advancePayment > 0 && (
@@ -692,19 +786,20 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+          {/* Submit Buttons - Mobile optimized */}
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
+              className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !selectedCustomer || formData.items.length === 0 || formData.items.some(item => item.productId === 0)}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto px-4 py-3 sm:py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? `${mode === 'add' ? 'Creating' : 'Updating'}...` : `${mode === 'add' ? 'Create' : 'Update'} Booking`}
             </button>
@@ -712,10 +807,10 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
         </form>
       </div>
 
-      {/* New Customer Modal */}
+      {/* New Customer Modal - Mobile optimized */}
       {isNewCustomerModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 w-full max-w-md">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 Add New Customer
@@ -726,7 +821,7 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
                   setNewCustomerData({ name: '', phone1: '', phone2: '', address: '' });
                   setError(null);
                 }}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1"
               >
                 <X size={20} />
               </button>
@@ -741,7 +836,7 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
                   type="text"
                   value={newCustomerData.name}
                   onChange={(e) => setNewCustomerData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
                   placeholder="Enter customer name"
                 />
               </div>
@@ -754,7 +849,7 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
                   type="tel"
                   value={newCustomerData.phone1}
                   onChange={(e) => setNewCustomerData(prev => ({ ...prev, phone1: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
                   placeholder="Enter primary phone number"
                 />
               </div>
@@ -767,7 +862,7 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
                   type="tel"
                   value={newCustomerData.phone2}
                   onChange={(e) => setNewCustomerData(prev => ({ ...prev, phone2: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
                   placeholder="Enter secondary phone number (optional)"
                 />
               </div>
@@ -780,13 +875,13 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
                   value={newCustomerData.address}
                   onChange={(e) => setNewCustomerData(prev => ({ ...prev, address: e.target.value }))}
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 resize-none"
                   placeholder="Enter address (optional)"
                 />
               </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div className="flex flex-col sm:flex-row gap-3 mt-6">
               <button
                 type="button"
                 onClick={() => {
@@ -794,14 +889,14 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
                   setNewCustomerData({ name: '', phone1: '', phone2: '', address: '' });
                   setError(null);
                 }}
-                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 rounded-lg transition-colors"
+                className="w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={createNewCustomer}
-                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                className="w-full px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
               >
                 Create Customer
               </button>

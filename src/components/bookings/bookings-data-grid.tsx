@@ -97,6 +97,73 @@ export function BookingsDataGrid() {
     }
   };
 
+  // Custom mobile card renderer for bookings
+  const renderBookingCard = (booking: Booking, index: number) => (
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
+      {/* Header with ID and Status */}
+      <div className="flex items-center justify-between">
+        <code className="text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded font-mono">
+          {formatId(booking.id)}
+        </code>
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBookingStatusColor(booking.status)}`}>
+          {booking.status}
+        </span>
+      </div>
+
+      {/* Customer Info */}
+      <div>
+        <div className="font-medium text-gray-900 dark:text-gray-100">{booking.customer.name}</div>
+        <div className="text-sm text-gray-600 dark:text-gray-400">{booking.customer.phone1}</div>
+      </div>
+
+      {/* Rental Period */}
+      <div className="text-sm">
+        <div className="font-medium text-gray-900 dark:text-gray-100">
+          {format(new Date(booking.startDate), 'MMM dd, yyyy')} - {format(new Date(booking.endDate), 'MMM dd, yyyy')}
+        </div>
+        <div className="text-gray-600 dark:text-gray-400">
+          {booking.startTime} - {booking.endTime}
+        </div>
+      </div>
+
+      {/* Products */}
+      <div>
+        <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Products ({booking.items.length} item{booking.items.length > 1 ? 's' : ''})
+        </div>
+        <div className="space-y-1">
+          {booking.items.map((item, idx) => (
+            <div key={idx} className="flex justify-between text-sm">
+              <span className="text-gray-900 dark:text-gray-100">
+                {item.quantity}x {item.product.name}
+              </span>
+              <span className="text-gray-600 dark:text-gray-400">
+                ₹{item.pricePerDay}/day
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Total Amount */}
+      <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-600">
+        <span className="font-medium text-green-600 text-lg">
+          ₹{booking.totalAmount.toFixed(2)}
+        </span>
+        <div className="flex items-center space-x-2">
+          <EditBookingForm 
+            booking={booking} 
+            onBookingUpdated={fetchBookings}
+          />
+          <DeleteBookingButton 
+            booking={booking} 
+            onBookingDeleted={fetchBookings}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
   const columns: Column<Booking>[] = [
     {
       key: 'id',
@@ -206,7 +273,7 @@ export function BookingsDataGrid() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Bookings</h1>
           <p className="text-gray-600 dark:text-gray-400">Manage rental bookings and schedules</p>
@@ -222,6 +289,7 @@ export function BookingsDataGrid() {
         onSearch={setSearchTerm}
         loading={loading}
         emptyMessage="No bookings found. Create your first booking to get started."
+        renderCard={renderBookingCard}
       />
     </div>
   );

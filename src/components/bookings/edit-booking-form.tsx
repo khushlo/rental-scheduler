@@ -74,7 +74,7 @@ export function EditBookingForm({ booking, onBookingUpdated }: EditBookingFormPr
 }
 
 // Similar structure to AddBookingForm but for editing
-import { X, UserPlus } from 'lucide-react';
+import { X, UserPlus, MessageSquare, Plus } from 'lucide-react';
 
 interface Product {
   id: number;
@@ -121,6 +121,7 @@ function EditBookingDialog({ booking, onClose, onSuccess }: EditBookingDialogPro
     phone2: '',
     address: ''
   });
+  const [expandedNotes, setExpandedNotes] = useState<Set<number>>(new Set());
   const [products, setProducts] = useState<Product[]>([]);
   const [formData, setFormData] = useState<BookingFormData>({
     startDate: booking.startDate.split('T')[0],
@@ -184,6 +185,22 @@ function EditBookingDialog({ booking, onClose, onSuccess }: EditBookingDialogPro
     setCustomerSearchTerm(customer.name);
     setCustomerSuggestions([]);
     setFormData(prev => ({ ...prev, customerId: customer.id }));
+  };
+
+  const toggleNoteExpansion = (index: number) => {
+    setExpandedNotes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
+  const hasNoteContent = (index: number) => {
+    return formData.items[index]?.notes && formData.items[index].notes.trim() !== '';
   };
 
   const createNewCustomer = async () => {
@@ -393,7 +410,8 @@ function EditBookingDialog({ booking, onClose, onSuccess }: EditBookingDialogPro
 
             {/* Rental Period */}
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              {/* Dates Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Start Date <span className="text-red-500">*</span>
@@ -419,7 +437,9 @@ function EditBookingDialog({ booking, onClose, onSuccess }: EditBookingDialogPro
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              
+              {/* Times Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Start Time
@@ -458,16 +478,8 @@ function EditBookingDialog({ booking, onClose, onSuccess }: EditBookingDialogPro
 
           {/* Products Section */}
           <div>
-            <div className="flex justify-between items-center mb-4">
+            <div className="mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Rental Items</h3>
-              <button
-                type="button"
-                onClick={addBookingItem}
-                disabled={isSubmitting}
-                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm disabled:opacity-50"
-              >
-                Add Item
-              </button>
             </div>
 
             <div className="space-y-4">
@@ -493,59 +505,83 @@ function EditBookingDialog({ booking, onClose, onSuccess }: EditBookingDialogPro
                       </select>
                     </div>
                     
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Quantity <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => updateBookingItem(index, 'quantity', parseInt(e.target.value) || 1)}
-                        disabled={isSubmitting}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Price/Day
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={item.pricePerDay}
-                        onChange={(e) => updateBookingItem(index, 'pricePerDay', parseFloat(e.target.value) || 0)}
-                        disabled={isSubmitting}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
-                        placeholder="Manual price"
-                        title="Enter custom price per day (overrides product default)"
-                      />
-                    </div>
-                    
-                    <div className="flex items-end">
-                      <div className="flex-1 mr-2">
+                    {/* Quantity, Price/Day, and Subtotal Row */}
+                    <div className="flex items-end gap-2">
+                      <div className="flex-[0.3]">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Quantity <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={item.quantity === 0 ? '' : item.quantity.toString()}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === '' || /^[0-9]+$/.test(value)) {
+                              updateBookingItem(index, 'quantity', value === '' ? 0 : parseInt(value));
+                            }
+                          }}
+                          onBlur={(e) => {
+                            if (e.target.value === '') {
+                              updateBookingItem(index, 'quantity', 1);
+                            }
+                          }}
+                          disabled={isSubmitting}
+                          placeholder="1"
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
+                        />
+                      </div>
+                      
+                      <div className="flex-[0.3]">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Price/Day
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          pattern="[0-9]*[.]?[0-9]*"
+                          value={item.pricePerDay === 0 ? '' : item.pricePerDay.toString()}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                              updateBookingItem(index, 'pricePerDay', value === '' ? 0 : parseFloat(value) || 0);
+                            }
+                          }}
+                          disabled={isSubmitting}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
+                          placeholder="Manual price"
+                          title="Enter custom price per day (overrides product default)"
+                        />
+                      </div>
+                      
+                      <div className="flex-[0.4]">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Subtotal
                         </label>
                         <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={item.subtotal}
-                          onChange={(e) => updateBookingItem(index, 'subtotal', parseFloat(e.target.value) || 0)}
+                          type="text"
+                          inputMode="decimal"
+                          pattern="[0-9]*[.]?[0-9]*"
+                          value={item.subtotal === 0 ? '' : item.subtotal.toString()}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                              updateBookingItem(index, 'subtotal', value === '' ? 0 : parseFloat(value) || 0);
+                            }
+                          }}
                           disabled={isSubmitting}
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
                           placeholder="Manual subtotal"
                           title="Enter custom subtotal (overrides auto-calculated value)"
                         />
                       </div>
+                      
                       <button
                         type="button"
                         onClick={() => removeBookingItem(index)}
                         disabled={isSubmitting}
-                        className="bg-red-600 hover:bg-red-700 text-white p-2 rounded disabled:opacity-50"
+                        className="bg-red-600 hover:bg-red-700 text-white p-2 rounded disabled:opacity-50 flex items-center justify-center flex-shrink-0"
                         title="Remove item"
                       >
                         <X size={16} />
@@ -553,19 +589,55 @@ function EditBookingDialog({ booking, onClose, onSuccess }: EditBookingDialogPro
                     </div>
                   </div>
                   
+                  {/* Item Notes - Expandable */}
                   {item.productId > 0 && (
                     <div className="mt-3">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Item Notes
-                      </label>
-                      <input
-                        type="text"
-                        value={item.notes || ''}
-                        onChange={(e) => updateBookingItem(index, 'notes', e.target.value)}
-                        disabled={isSubmitting}
-                        placeholder="Any special notes for this item"
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
-                      />
+                      {!expandedNotes.has(index) ? (
+                        <button
+                          type="button"
+                          onClick={() => toggleNoteExpansion(index)}
+                          className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                            hasNoteContent(index)
+                              ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600 text-blue-700 dark:text-blue-300'
+                              : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
+                          }`}
+                          disabled={isSubmitting}
+                        >
+                          <MessageSquare size={16} />
+                          {hasNoteContent(index) ? 'Edit Note' : 'Add Note'}
+                          {hasNoteContent(index) && (
+                            <span className="text-xs font-medium">
+                              ({item.notes?.length} chars)
+                            </span>
+                          )}
+                        </button>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Item Notes
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => toggleNoteExpansion(index)}
+                              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
+                              disabled={isSubmitting}
+                              title="Collapse notes"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                          <input
+                            type="text"
+                            value={item.notes || ''}
+                            onChange={(e) => updateBookingItem(index, 'notes', e.target.value)}
+                            disabled={isSubmitting}
+                            placeholder="Any special notes for this item"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
+                            autoFocus
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -576,6 +648,19 @@ function EditBookingDialog({ booking, onClose, onSuccess }: EditBookingDialogPro
                   No items added yet. Click "Add Item" to get started.
                 </div>
               )}
+              
+              {/* Add Item Button */}
+              <div className="flex justify-center pt-4">
+                <button
+                  type="button"
+                  onClick={addBookingItem}
+                  disabled={isSubmitting}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50 flex items-center gap-2"
+                >
+                  <Plus size={16} />
+                  Add Item
+                </button>
+              </div>
             </div>
           </div>
 
@@ -602,11 +687,16 @@ function EditBookingDialog({ booking, onClose, onSuccess }: EditBookingDialogPro
                     Advance Payment
                   </label>
                   <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.advancePayment}
-                    onChange={(e) => setFormData(prev => ({ ...prev, advancePayment: parseFloat(e.target.value) || 0 }))}
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9]*[.]?[0-9]*"
+                    value={formData.advancePayment === 0 ? '' : formData.advancePayment.toString()}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                        setFormData(prev => ({ ...prev, advancePayment: value === '' ? 0 : parseFloat(value) || 0 }));
+                      }
+                    }}
                     disabled={isSubmitting}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
                     placeholder="0.00"

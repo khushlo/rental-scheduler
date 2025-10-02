@@ -155,24 +155,24 @@ export function DataGrid<T extends Record<string, any>>({
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
         {/* Mobile Card View */}
         {isMobile || cardView ? (
-          <div className="space-y-4 p-4">
+          <div className="space-y-3 p-3 sm:p-4">
             {currentData.length === 0 ? (
               <div className="text-center text-gray-700 dark:text-gray-300 py-8">
                 {emptyMessage}
               </div>
             ) : (
               currentData.map((item, rowIndex) => (
-                <div key={rowIndex} className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
+                <div key={rowIndex}>
                   {renderCard ? (
                     renderCard(item, startIndex + rowIndex)
                   ) : (
-                    <div className="space-y-3">
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-800 shadow-sm space-y-2">
                       {columns.map((column, colIndex) => (
-                        <div key={String(column.key) + colIndex} className="flex justify-between items-start">
-                          <div className="font-medium text-black text-sm min-w-0 flex-1">
+                        <div key={String(column.key) + colIndex} className="flex justify-between items-start gap-2">
+                          <div className="font-medium text-gray-700 dark:text-gray-300 text-sm min-w-0 flex-shrink-0">
                             {column.header}:
                           </div>
-                          <div className="text-black text-sm ml-2 text-right">
+                          <div className="text-gray-900 dark:text-gray-100 text-sm text-right flex-1 min-w-0">
                             {column.mobileRender || column.render 
                               ? (column.mobileRender || column.render)!(item, startIndex + rowIndex)
                               : String(item[column.key] || '-')
@@ -233,45 +233,47 @@ export function DataGrid<T extends Record<string, any>>({
         )}
       </div>
 
-      {/* Pagination */}
+      {/* Pagination - Mobile optimized */}
       {data.length > 0 && (
-        <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
-          <div className="text-sm text-black">
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center px-3 sm:px-0">
+          <div className="text-sm text-gray-700 dark:text-gray-300 text-center sm:text-left">
             Showing {startIndex + 1} to {endIndex} of {data.length} results
           </div>
           
           {totalPages > 1 && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center justify-center gap-1 overflow-x-auto">
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="p-2 text-black hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
 
-              {renderPageNumbers().map((page, index) => (
-                <button
-                  key={index}
-                  onClick={() => typeof page === 'number' ? handlePageChange(page) : undefined}
-                  disabled={typeof page === 'string'}
-                  className={cn(
-                    "px-3 py-1 text-sm rounded",
-                    typeof page === 'string'
-                      ? "text-gray-400 cursor-default"
-                      : currentPage === page
-                      ? "bg-blue-600 text-white"
-                      : "text-gray-700 hover:bg-gray-100"
-                  )}
-                >
-                  {page}
-                </button>
-              ))}
+              <div className="flex items-center gap-1 min-w-0">
+                {renderPageNumbers().map((page, index) => (
+                  <button
+                    key={index}
+                    onClick={() => typeof page === 'number' ? handlePageChange(page) : undefined}
+                    disabled={typeof page === 'string'}
+                    className={cn(
+                      "px-2 sm:px-3 py-1 text-sm rounded flex-shrink-0 min-w-[32px] sm:min-w-[36px]",
+                      typeof page === 'string'
+                        ? "text-gray-400 dark:text-gray-500 cursor-default"
+                        : currentPage === page
+                        ? "bg-blue-600 text-white"
+                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    )}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
 
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
