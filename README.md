@@ -1,36 +1,154 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rental Scheduler
+
+A modern rental scheduling application built with Next.js, TypeScript, and Prisma that helps you manage your rental business efficiently. Track inventory, manage customers, create bookings, and avoid scheduling conflicts.
+
+## Features
+
+### 🏠 Dashboard
+- Overview of all rental operations
+- Quick access to main features
+- Clean, intuitive interface
+
+### 📦 Product Management
+- Add and manage rental products
+- Set pricing per day
+- Categorize products
+- Track product availability
+
+### 👥 Customer Management
+- Store customer information
+- Contact details and notes
+- Rental history tracking
+
+### 📅 Booking System
+- Create rental bookings
+- Automatic conflict detection
+- Multiple booking statuses (Pending, Confirmed, Active, Completed, Cancelled)
+- Total amount calculation
+
+### 🔒 Conflict Prevention
+- Real-time availability checking
+- Prevents double-booking
+- Clear error messages for conflicts
+
+## Tech Stack
+
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript
+- **Database**: SQLite with Prisma ORM
+- **Styling**: Tailwind CSS
+- **Forms**: React Hook Form with Zod validation
+- **Icons**: Lucide React
+- **Deployment Ready**: Vercel, Netlify, or any Node.js hosting
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+- Node.js 18+ 
+- npm, yarn, or pnpm
 
+### Installation
+
+1. Clone or download the project
+2. Install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Set up the database:
+```bash
+npx prisma generate
+npx prisma migrate dev --name init
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+4. Start the development server:
+```bash
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-## Learn More
+## Database Schema
 
-To learn more about Next.js, take a look at the following resources:
+### Products
+- Product information (name, description, category)
+- Pricing per day
+- Active/inactive status
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Customers  
+- Contact information
+- Address and notes
+- Relationship to bookings
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Bookings
+- Date range (start/end)
+- Status tracking
+- Total amount
+- Relationships to products and customers
 
-## Deploy on Vercel
+## API Endpoints
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Products
+- `GET /api/products` - List all active products
+- `POST /api/products` - Create new product
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Customers
+- `GET /api/customers` - List all customers  
+- `POST /api/customers` - Create new customer
+
+### Bookings
+- `GET /api/bookings` - List all bookings with relationships
+- `POST /api/bookings` - Create new booking (with conflict checking)
+
+## Environment Variables
+
+Create a `.env` file in the root directory:
+
+```env
+DATABASE_URL="file:./dev.db"
+NEXTAUTH_SECRET="your-secret-key-here"
+NEXTAUTH_URL="http://localhost:3000"
+```
+
+## Development
+
+### Adding New Features
+1. Update the Prisma schema if needed (`prisma/schema.prisma`)
+2. Run migrations: `npx prisma migrate dev --name feature_name`
+3. Create API routes in `src/app/api/`
+4. Add validation schemas in `src/lib/validations.ts`
+5. Create UI components and pages
+
+### Database Management
+- View data: `npx prisma studio`
+- Reset database: `npx prisma migrate reset`
+- Deploy schema: `npx prisma migrate deploy`
+
+## Deployment
+
+### Vercel (Recommended)
+1. Push to GitHub
+2. Connect to Vercel
+3. Set environment variables
+4. Deploy automatically
+
+### Manual Deployment
+1. Build the project: `npm run build`
+2. Set production DATABASE_URL
+3. Run migrations: `npx prisma migrate deploy`
+4. Start production server: `npm run start`
+
+## Future Enhancements
+
+- [ ] Customer dashboard pages
+- [ ] Product detail pages  
+- [ ] Visual calendar component
+- [ ] Email notifications
+- [ ] Payment integration
+- [ ] Advanced reporting
+- [ ] Mobile app support
+- [ ] Multi-tenant support
+
+## License
+
+MIT License - feel free to use this for your rental business!
