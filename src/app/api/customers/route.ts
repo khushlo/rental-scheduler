@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { CustomerSchema } from '@/lib/validations'
+import { calculateBookingStatus } from '@/lib/utils'
 
 export async function GET() {
   try {
@@ -75,13 +76,16 @@ export async function DELETE(request: NextRequest) {
     const customerId = parseInt(id, 10)
     
     // Check if customer has any active bookings
-    const activeBookings = await prisma.booking.findMany({
+    const allBookings = await prisma.booking.findMany({
       where: {
-        customerId,
-        status: {
-          in: ['CONFIRMED', 'ACTIVE']
-        }
+        customerId
       }
+    })
+    
+    // Filter to only active bookings (confirmed or active status)
+    const activeBookings = allBookings.filter(booking => {
+      const status = calculateBookingStatus(booking.startDate, booking.endDate)
+      return status === 'confirmed' || status === 'active'
     })
     
     if (activeBookings.length > 0) {

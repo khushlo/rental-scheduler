@@ -88,8 +88,8 @@ export async function GET(request: NextRequest) {
     // Calculate booked quantity from non-completed/non-cancelled bookings
     const bookedQuantity = overlappingBookings.reduce((total, booking) => {
       const status = calculateBookingStatus(booking.startDate, booking.endDate)
-      // Only count bookings that are CONFIRMED or ACTIVE
-      if (status === 'CONFIRMED' || status === 'ACTIVE') {
+      // Only count bookings that are confirmed or active
+      if (status === 'confirmed' || status === 'active') {
         return total + booking.items.reduce((itemTotal: number, bookingItem: any) => {
           return itemTotal + bookingItem.quantity
         }, 0)
@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
       conflictingBookings: overlappingBookings
         .filter(booking => {
           const status = calculateBookingStatus(booking.startDate, booking.endDate)
-          return status === 'CONFIRMED' || status === 'ACTIVE'
+          return status === 'confirmed' || status === 'active'
         })
         .map(booking => ({
           id: booking.id,
@@ -182,8 +182,8 @@ export async function POST(request: NextRequest) {
 
           const bookedQuantity = overlappingBookings.reduce((total, booking) => {
             const status = calculateBookingStatus(booking.startDate, booking.endDate)
-            // Only count bookings that are CONFIRMED or ACTIVE
-            if (status === 'CONFIRMED' || status === 'ACTIVE') {
+            // Only count bookings that are confirmed or active
+            if (status === 'confirmed' || status === 'active') {
               return total + booking.items.reduce((itemTotal: number, item: any) => {
                 return itemTotal + item.quantity
               }, 0)

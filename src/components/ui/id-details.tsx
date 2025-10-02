@@ -54,7 +54,7 @@ export function IdDetails({ id, type, data, onLookup }: IdDetailsProps) {
           {type}
         </span>
         <code className="text-sm font-mono bg-white/50 dark:bg-gray-900/50 px-2 py-1 rounded">
-          {formatId(id, 12)}
+          {formatId(id)}
         </code>
         <div className="flex items-center gap-1">
           <button
@@ -149,7 +149,7 @@ export function IdSearch({ onSearch, loading }: IdSearchProps) {
 interface IdRelationshipsProps {
   data: any;
   type: 'booking' | 'customer' | 'product';
-  onLookup?: (id: string, type: string) => void;
+  onLookup?: (id: number | string, type: string) => void;
 }
 
 export function IdRelationships({ data, type, onLookup }: IdRelationshipsProps) {

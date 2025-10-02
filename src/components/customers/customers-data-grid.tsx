@@ -73,7 +73,7 @@ export function CustomersDataGrid() {
       width: '18%',
       render: (customer) => (
         <code className="text-sm bg-gray-100 px-3 py-2 rounded font-mono">
-          {formatId(customer.id, 8)}
+          {formatId(customer.id)}
         </code>
       )
     },

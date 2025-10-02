@@ -7,7 +7,7 @@ import { AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 interface LookupResult {
   data: any;
   type: 'booking' | 'customer' | 'product';
-  id: string;
+  id: string | number;
   error?: string;
 }
 
@@ -16,7 +16,7 @@ export default function IdLookupPage() {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<LookupResult[]>([]);
 
-  const handleLookup = async (id: string, type: string) => {
+  const handleLookup = async (id: string | number, type: string) => {
     setLoading(true);
     setResult(null);
 

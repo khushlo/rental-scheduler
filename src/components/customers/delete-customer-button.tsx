@@ -6,8 +6,8 @@ import { Trash2, AlertTriangle, X } from 'lucide-react';
 interface Customer {
   id: number;
   name: string;
-  email: string;
-  phone?: string;
+  phone1?: string;
+  phone2?: string;
   address?: string;
   notes?: string;
   _count?: {
@@ -143,7 +143,7 @@ export function DeleteCustomerButton({ customer, onCustomerDeleted }: DeleteCust
                     </div>
                   </div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">
-                    <strong>Customer:</strong> {customer.name} ({customer.email})
+                    <strong>Customer:</strong> {customer.name}
                   </div>
                   {validationError.activeBookingsCount > 0 && (
                     <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -162,8 +162,7 @@ export function DeleteCustomerButton({ customer, onCustomerDeleted }: DeleteCust
                   <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                     <div className="text-sm">
                       <div><strong>Name:</strong> {customer.name}</div>
-                      <div><strong>Email:</strong> {customer.email}</div>
-                      {customer.phone && <div><strong>Phone:</strong> {customer.phone}</div>}
+                      {customer.phone1 && <div><strong>Phone:</strong> {customer.phone1}</div>}
                       {customer._count && (
                         <div className="mt-2 text-gray-600 dark:text-gray-400">
                           <strong>Total Bookings:</strong> {customer._count.bookings}

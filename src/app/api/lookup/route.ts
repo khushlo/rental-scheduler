@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { IdLookupSchema } from '@/lib/validations'
+import { calculateBookingStatus } from '@/lib/utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -67,13 +68,6 @@ export async function GET(request: NextRequest) {
                   }
                 }
               },
-              where: {
-                booking: {
-                  status: {
-                    in: ['PENDING', 'CONFIRMED', 'ACTIVE']
-                  }
-                }
-              },
               orderBy: {
                 booking: {
                   startDate: 'asc'
@@ -122,7 +116,6 @@ export async function POST(request: NextRequest) {
                   id: true,
                   startDate: true,
                   endDate: true,
-                  status: true,
                   customer: { select: { name: true } }
                 }
               })
@@ -133,8 +126,7 @@ export async function POST(request: NextRequest) {
                 select: {
                   id: true,
                   name: true,
-                  email: true,
-                  phone: true
+                  phone1: true
                 }
               })
 
@@ -144,9 +136,8 @@ export async function POST(request: NextRequest) {
                 select: {
                   id: true,
                   name: true,
-                  pricePerDay: true,
                   quantity: true,
-                  isActive: true
+                  status: true
                 }
               })
 

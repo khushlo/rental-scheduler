@@ -104,7 +104,7 @@ export function BookingsDataGrid() {
       width: '15%',
       render: (booking) => (
         <code className="text-sm bg-gray-100 px-3 py-2 rounded font-mono">
-          {formatId(booking.id, 8)}
+          {formatId(booking.id)}
         </code>
       )
     },
