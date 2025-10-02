@@ -109,11 +109,9 @@ export async function POST(request: NextRequest) {
       }
 
       // Check current bookings for this product in the same time period
-      const overlappingBookings = await prisma.booking.findMany({
+      // Get all bookings first, then filter by calculated status
+      const allOverlappingBookings = await prisma.booking.findMany({
         where: {
-          status: {
-            in: ['CONFIRMED', 'ACTIVE']
-          },
           items: {
             some: {
               productId: item.productId
@@ -139,6 +137,12 @@ export async function POST(request: NextRequest) {
             }
           }
         }
+      })
+
+      // Filter bookings based on calculated status (only active/confirmed bookings create conflicts)
+      const overlappingBookings = allOverlappingBookings.filter(booking => {
+        const status = calculateBookingStatus(booking.startDate, booking.endDate)
+        return status === 'confirmed' || status === 'active'
       })
 
       // Calculate total quantity already booked for this time period
@@ -170,11 +174,15 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Calculate subtotals for each item
+    // Use subtotals from the request (preserving manual edits from UI)
     const itemsWithSubtotal = validatedData.items.map(item => ({
       ...item,
-      subtotal: item.quantity * item.pricePerDay * Math.ceil((validatedData.endDate.getTime() - validatedData.startDate.getTime()) / (1000 * 60 * 60 * 24))
+      // Use the subtotal from UI if provided, otherwise calculate it
+      subtotal: item.subtotal !== undefined ? item.subtotal : 
+                item.quantity * item.pricePerDay * Math.ceil((validatedData.endDate.getTime() - validatedData.startDate.getTime()) / (1000 * 60 * 60 * 24))
     }))
+    
+    console.log('Creating booking with items:', JSON.stringify(itemsWithSubtotal, null, 2)); // Debug log
     
     const booking = await prisma.booking.create({
       data: {
@@ -247,12 +255,10 @@ export async function PUT(request: NextRequest) {
       }
 
       // Check conflicts (excluding current booking)
-      const overlappingBookings = await prisma.booking.findMany({
+      // Get all overlapping bookings first, then filter by calculated status
+      const allOverlappingBookings = await prisma.booking.findMany({
         where: {
           id: { not: id }, // Exclude current booking
-          status: {
-            in: ['CONFIRMED', 'ACTIVE']
-          },
           items: {
             some: {
               productId: item.productId
@@ -280,6 +286,12 @@ export async function PUT(request: NextRequest) {
         }
       })
 
+      // Filter bookings based on calculated status (only active/confirmed bookings create conflicts)
+      const overlappingBookings = allOverlappingBookings.filter(booking => {
+        const status = calculateBookingStatus(booking.startDate, booking.endDate)
+        return status === 'confirmed' || status === 'active'
+      })
+
       const totalBookedQuantity = overlappingBookings.reduce((total, booking) => {
         return total + booking.items.reduce((itemTotal, bookingItem) => {
           return itemTotal + bookingItem.quantity
@@ -301,11 +313,15 @@ export async function PUT(request: NextRequest) {
       }
     }
     
-    // Calculate subtotals for items
+    // Use subtotals from the request (preserving manual edits from UI)
     const itemsWithSubtotal = validatedData.items.map(item => ({
       ...item,
-      subtotal: item.quantity * item.pricePerDay * Math.ceil((validatedData.endDate.getTime() - validatedData.startDate.getTime()) / (1000 * 60 * 60 * 24))
+      // Use the subtotal from UI if provided, otherwise calculate it
+      subtotal: item.subtotal !== undefined ? item.subtotal : 
+                item.quantity * item.pricePerDay * Math.ceil((validatedData.endDate.getTime() - validatedData.startDate.getTime()) / (1000 * 60 * 60 * 24))
     }))
+    
+    console.log('Updating booking with items:', JSON.stringify(itemsWithSubtotal, null, 2)); // Debug log
     
     // Delete existing items and create new ones
     const booking = await prisma.$transaction(async (tx) => {
@@ -385,7 +401,7 @@ export async function DELETE(request: NextRequest) {
     // Calculate current status
     const status = calculateBookingStatus(booking.startDate, booking.endDate)
     
-    if (status === 'ACTIVE') {
+    if (status === 'active') {
       return NextResponse.json({ 
         error: 'Cannot delete active booking',
         details: 'Active bookings cannot be deleted. Please complete or cancel the booking first.',

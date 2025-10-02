@@ -41,7 +41,6 @@ interface Customer {
   phone1: string;
   phone2?: string;
   address?: string;
-  email: string; // Required for UI compatibility
 }
 
 interface Product {
@@ -87,6 +86,8 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
   const [error, setError] = useState<string | null>(null);
   const [customerSearchTerm, setCustomerSearchTerm] = useState('');
   const [customerSuggestions, setCustomerSuggestions] = useState<Customer[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     booking?.customer || null
   );
@@ -113,7 +114,14 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
   // Fetch products on component mount
   useEffect(() => {
     fetchProducts();
-  }, []);
+    
+    // Cleanup search timeout on unmount
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
 
   const fetchProducts = async () => {
     try {
@@ -130,23 +138,50 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
   const searchCustomers = async (searchTerm: string) => {
     if (searchTerm.length < 2) {
       setCustomerSuggestions([]);
+      setIsSearching(false);
       return;
     }
 
+    setIsSearching(true);
     try {
       const response = await fetch(`/api/customers/search?search=${encodeURIComponent(searchTerm)}`);
       if (response.ok) {
         const data = await response.json();
+        console.log('Customer search results:', data); // Debug log
         setCustomerSuggestions(data);
+      } else {
+        console.error('Customer search failed with status:', response.status);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error details:', errorData);
+        setCustomerSuggestions([]);
       }
     } catch (error) {
       console.error('Error searching customers:', error);
+      setCustomerSuggestions([]);
     }
+    setIsSearching(false);
   };
 
   const handleCustomerSearch = (value: string) => {
     setCustomerSearchTerm(value);
-    searchCustomers(value);
+    
+    // Clear selected customer if user modifies the search term
+    if (selectedCustomer && value !== selectedCustomer.name) {
+      setSelectedCustomer(null);
+      setFormData(prev => ({ ...prev, customerId: 0 }));
+    }
+    
+    // Clear existing timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    // Set new timeout for debounced search
+    const newTimeout = setTimeout(() => {
+      searchCustomers(value);
+    }, 300);
+    
+    setSearchTimeout(newTimeout);
   };
 
   const selectCustomer = (customer: Customer) => {
@@ -208,10 +243,21 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
       const newItems = [...prev.items];
       newItems[index] = { ...newItems[index], [field]: value };
       
-      // Auto-calculate subtotal when quantity or pricePerDay changes
+      // Auto-calculate subtotal when quantity or pricePerDay changes, but preserve manual edits
       if (field === 'quantity' || field === 'pricePerDay') {
         const days = Math.ceil((new Date(prev.endDate).getTime() - new Date(prev.startDate).getTime()) / (1000 * 60 * 60 * 24)) || 1;
-        newItems[index].subtotal = newItems[index].quantity * newItems[index].pricePerDay * days;
+        const autoCalculatedSubtotal = newItems[index].quantity * newItems[index].pricePerDay * days;
+        
+        // Only auto-update if the current subtotal matches the previous auto-calculated value
+        // This preserves manual subtotal edits
+        const previousDays = Math.ceil((new Date(prev.endDate).getTime() - new Date(prev.startDate).getTime()) / (1000 * 60 * 60 * 24)) || 1;
+        const previousAutoCalculated = (field === 'quantity' ? prev.items[index].quantity : newItems[index].quantity) * 
+                                     (field === 'pricePerDay' ? prev.items[index].pricePerDay : newItems[index].pricePerDay) * 
+                                     previousDays;
+        
+        if (Math.abs(prev.items[index].subtotal - previousAutoCalculated) < 0.01) {
+          newItems[index].subtotal = autoCalculatedSubtotal;
+        }
       }
       
       // Auto-update price when product is selected, but don't override manual pricing
@@ -287,6 +333,8 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
         endDate: new Date(formData.endDate)
       };
 
+      console.log('Sending booking data:', JSON.stringify(bookingData, null, 2)); // Debug log
+
       const method = mode === 'add' ? 'POST' : 'PUT';
       if (mode === 'edit' && booking?.id) {
         (bookingData as any).id = booking.id;
@@ -356,7 +404,14 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
                   >
                     <UserPlus size={16} />
                   </button>
-                  {customerSuggestions.length > 0 && (
+                  {isSearching && customerSearchTerm.length >= 2 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg top-full left-0">
+                      <div className="p-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                        Searching...
+                      </div>
+                    </div>
+                  )}
+                  {!isSearching && customerSuggestions.length > 0 && (
                     <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto top-full left-0">
                       {customerSuggestions.map((customer) => (
                         <div
@@ -371,6 +426,13 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
                           )}
                         </div>
                       ))}
+                    </div>
+                  )}
+                  {!isSearching && customerSearchTerm.length >= 2 && customerSuggestions.length === 0 && !selectedCustomer && (
+                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg top-full left-0">
+                      <div className="p-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                        No customers found. A new customer will be created with this name.
+                      </div>
                     </div>
                   )}
                 </div>
@@ -527,9 +589,17 @@ function BookingDialog({ mode, booking, onClose, onSuccess }: BookingDialogProps
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Subtotal
                         </label>
-                        <div className="px-3 py-2 bg-gray-100 dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg text-gray-700 dark:text-gray-300">
-                          ₹{item.subtotal.toFixed(2)}
-                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={item.subtotal}
+                          onChange={(e) => updateBookingItem(index, 'subtotal', parseFloat(e.target.value) || 0)}
+                          disabled={isSubmitting}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
+                          placeholder="Manual subtotal"
+                          title="Enter custom subtotal (overrides auto-calculated value)"
+                        />
                       </div>
                       <button
                         type="button"

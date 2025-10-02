@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ProductSchema } from '@/lib/validations'
+import { calculateBookingStatus } from '@/lib/utils'
 
 export async function GET() {
   try {
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
     if (typeof body.quantity !== 'number' || body.quantity < 0) {
       return NextResponse.json({ error: 'Valid quantity is required' }, { status: 400 })
     }
-    if (typeof body.rentPrice !== 'number' || body.rentPrice <= 0) {
+    if (typeof body.rentPrice !== 'number' || body.rentPrice < 0) {
       return NextResponse.json({ error: 'Valid rent price is required' }, { status: 400 })
     }
     if (typeof body.status !== 'boolean') {
@@ -87,11 +88,9 @@ export async function DELETE(request: NextRequest) {
     const productId = parseInt(id, 10)
     
     // Check if product has active bookings
-    const activeBookings = await prisma.booking.findMany({
+    // Get all bookings for this product, then filter by calculated status
+    const allBookings = await prisma.booking.findMany({
       where: {
-        status: {
-          in: ['PENDING', 'CONFIRMED', 'ACTIVE']
-        },
         items: {
           some: {
             productId: productId
@@ -105,13 +104,19 @@ export async function DELETE(request: NextRequest) {
       }
     })
 
+    // Filter to only active/confirmed bookings using calculated status
+    const activeBookings = allBookings.filter(booking => {
+      const status = calculateBookingStatus(booking.startDate, booking.endDate)
+      return status === 'confirmed' || status === 'active'
+    })
+
     if (activeBookings.length > 0) {
       return NextResponse.json({
-        error: 'Cannot delete product with active, pending, or confirmed bookings',
+        error: 'Cannot delete product with active or confirmed bookings',
         activeBookings: activeBookings.map(booking => ({
           id: booking.id,
           customerName: booking.customer.name,
-          status: booking.status,
+          status: calculateBookingStatus(booking.startDate, booking.endDate),
           startDate: booking.startDate,
           endDate: booking.endDate
         }))

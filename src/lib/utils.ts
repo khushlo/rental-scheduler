@@ -20,27 +20,38 @@ export function searchInIds(ids: (string | number)[], searchTerm: string): boole
   );
 }
 
-export type BookingStatus = 'upcoming' | 'active' | 'completed' | 'cancelled';
+export type BookingStatus = 'confirmed' | 'active' | 'completed' | 'cancelled';
 
 export function calculateBookingStatus(
-  startDate: string,
-  endDate: string,
+  startDate: string | Date,
+  endDate: string | Date,
   cancelled?: boolean
 ): BookingStatus {
   if (cancelled) return 'cancelled';
   
   const now = new Date();
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const start = typeof startDate === 'string' ? new Date(startDate) : startDate;
   
-  if (now < start) return 'upcoming';
-  if (now >= start && now <= end) return 'active';
-  return 'completed';
+  // Calculate days difference between start date and current date
+  const timeDiff = start.getTime() - now.getTime();
+  const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+  
+  // Apply the new status logic:
+  // IF start date > current date + 5 days then 'Confirmed'
+  if (daysDiff > 5) return 'confirmed';
+  
+  // IF current date - 4 days <= start date <= current date + 5 days Then 'Active'
+  if (daysDiff >= -4 && daysDiff <= 5) return 'active';
+  
+  // IF current date - 4 days > start date then 'Completed'
+  if (daysDiff < -4) return 'completed';
+  
+  return 'completed'; // fallback
 }
 
 export function getBookingStatusColor(status: BookingStatus): string {
   switch (status) {
-    case 'upcoming':
+    case 'confirmed':
       return 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/20';
     case 'active':
       return 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/20';
@@ -53,28 +64,7 @@ export function getBookingStatusColor(status: BookingStatus): string {
   }
 }
 
-// Database status type for API routes
-export type DbBookingStatus = 'PENDING' | 'CONFIRMED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
-
-// Function for updating database booking statuses (used in API routes)
-export function determineBookingStatus(
-  startDate: string | Date,
-  endDate: string | Date,
-  currentStatus: string
-): DbBookingStatus {
-  // Don't change cancelled bookings
-  if (currentStatus === 'CANCELLED') return 'CANCELLED';
-  
-  const now = new Date();
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  
-  if (now < start) return 'CONFIRMED';
-  if (now >= start && now <= end) return 'ACTIVE';
-  return 'COMPLETED';
-}
-
-// Additional utility functions that might be useful
+// Utility functions
 export function formatDate(date: string | Date): string {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   return dateObj.toLocaleDateString('en-US', {

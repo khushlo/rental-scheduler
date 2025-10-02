@@ -81,14 +81,5 @@ model BookingItem {
   @@map("booking_items")
 }
 
-// BookingStatus is now calculated dynamically based on dates
-// CONFIRMED: rental period >= current date + 5 days
-// ACTIVE: current date - 2 days <= rental period <= current date + 5 days  
-// COMPLETED: rental period + 2 days < current date
-// CANCELLED: manually set when needed
-enum BookingStatus {
-  CONFIRMED
-  ACTIVE
-  COMPLETED
-  CANCELLED
-}
+// BookingStatus is calculated dynamically on the UI side based on dates
+// No database status field needed

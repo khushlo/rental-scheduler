@@ -13,7 +13,7 @@ export const ProductSchema = z.object({
   id: OptionalIdSchema,
   name: z.string().min(1, "Product name is required"),
   quantity: z.number().min(0, "Quantity must be non-negative").default(1),
-  rentPrice: z.number().min(0, "Rent price must be positive"),
+  rentPrice: z.number().min(0, "Rent price must be non-negative").default(0),
   status: z.boolean().default(true),
 })
 
@@ -58,7 +58,6 @@ export const BookingSearchSchema = z.object({
   customerName: z.string().optional(),
   productId: z.number().int().positive().optional(),
   productName: z.string().optional(),
-  status: z.enum(["CONFIRMED", "ACTIVE", "COMPLETED", "CANCELLED"]).optional(),
   startDate: z.date().optional(),
   endDate: z.date().optional(),
 })

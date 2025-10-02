@@ -46,7 +46,7 @@ export function EditProductForm({ product, onProductUpdated }: EditProductFormPr
     const newErrors: ProductFormErrors = {};
     if (!formData.name.trim()) newErrors.name = 'Product name is required';
     if (formData.quantity < 0) newErrors.quantity = 'Quantity must be non-negative';
-    if (formData.rentPrice <= 0) newErrors.rentPrice = 'Rent price must be positive';
+    if (formData.rentPrice < 0) newErrors.rentPrice = 'Rent price must be non-negative';
     
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
