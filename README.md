@@ -127,16 +127,52 @@ NEXTAUTH_URL="http://localhost:3000"
 ## Deployment
 
 ### Vercel (Recommended)
-1. Push to GitHub
-2. Connect to Vercel
-3. Set environment variables
-4. Deploy automatically
+### Vercel Deployment with PostgreSQL
+
+1. **Set up PostgreSQL Database:**
+   - **Option 1: Vercel Postgres** (Recommended)
+     - Go to your Vercel project dashboard
+     - Navigate to Storage → Create Database → Postgres
+     - Copy the connection string
+   
+   - **Option 2: External Provider (Neon, Supabase, etc.)**
+     - Create account with your preferred provider
+     - Create a new PostgreSQL database
+     - Get the connection string
+
+2. **Configure Environment Variables in Vercel:**
+   ```
+   DATABASE_URL="postgresql://username:password@hostname:port/database"
+   NEXTAUTH_SECRET="your-production-secret"
+   NEXTAUTH_URL="https://your-app.vercel.app"
+   ```
+
+3. **Deploy Steps:**
+   - Push to GitHub
+   - Connect to Vercel
+   - Vercel will automatically run `npx prisma generate` during build
+   - Set environment variables in Vercel dashboard
+   - Deploy automatically
+
+4. **Run Migrations:**
+   - After first deployment, run migrations in Vercel Functions or locally:
+   ```bash
+   # Using Vercel CLI
+   vercel env pull .env.local
+   npx prisma migrate deploy
+   ```
 
 ### Manual Deployment
 1. Build the project: `npm run build`
 2. Set production DATABASE_URL
 3. Run migrations: `npx prisma migrate deploy`
 4. Start production server: `npm run start`
+
+### Local Development with PostgreSQL
+If you want to use PostgreSQL locally too:
+1. Update your `.env` file with PostgreSQL URL
+2. Run: `npm run db:migrate`
+3. Run: `npm run db:seed` (optional)
 
 ## Future Enhancements
 
