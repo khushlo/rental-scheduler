@@ -52,15 +52,15 @@ export function calculateBookingStatus(
 export function getBookingStatusColor(status: BookingStatus): string {
   switch (status) {
     case 'confirmed':
-      return 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/20';
+      return 'text-blue-600 bg-blue-50 dark:text-blue-600 dark:bg-blue-900/20';
     case 'active':
-      return 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/20';
+      return 'text-green-600 bg-green-50 dark:text-green-600 dark:bg-green-900/20';
     case 'completed':
-      return 'text-gray-600 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/20';
+      return 'text-gray-600 bg-gray-50 dark:text-gray-600 dark:bg-gray-900/20';
     case 'cancelled':
-      return 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/20';
+      return 'text-red-600 bg-red-50 dark:text-red-600 dark:bg-red-900/20';
     default:
-      return 'text-gray-600 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/20';
+      return 'text-gray-600 bg-gray-50 dark:text-gray-600 dark:bg-gray-900/20';
   }
 }
 
@@ -88,4 +88,50 @@ export function formatTime(time: string): string {
   const ampm = hour >= 12 ? 'PM' : 'AM';
   const hour12 = hour % 12 || 12;
   return `${hour12}:${minutes} ${ampm}`;
+}
+
+export function combineDateTime(date: string | Date, time: string): Date {
+  // Utility function to combine date and time into a full DateTime object
+  const dateObj = typeof date === 'string' ? new Date(date) : new Date(date);
+  const [hours, minutes] = time.split(':').map(Number);
+  dateObj.setHours(hours, minutes, 0, 0);
+  return dateObj;
+}
+
+export function formatDateTimeRange(startDate: string | Date, endDate: string | Date, startTime?: string, endTime?: string): string {
+  // Format a date/time range for display
+  const start = typeof startDate === 'string' ? new Date(startDate) : startDate;
+  const end = typeof endDate === 'string' ? new Date(endDate) : endDate;
+  
+  const startDateStr = formatDate(start);
+  const endDateStr = formatDate(end);
+  
+  if (startTime && endTime) {
+    const startTimeStr = formatTime(startTime);
+    const endTimeStr = formatTime(endTime);
+    
+    if (startDateStr === endDateStr) {
+      // Same day
+      return `${startDateStr} ${startTimeStr} - ${endTimeStr}`;
+    } else {
+      // Different days
+      return `${startDateStr} ${startTimeStr} - ${endDateStr} ${endTimeStr}`;
+    }
+  } else {
+    // Date only
+    if (startDateStr === endDateStr) {
+      return startDateStr;
+    } else {
+      return `${startDateStr} - ${endDateStr}`;
+    }
+  }
+}
+
+export function checkTimeOverlap(
+  start1: Date, end1: Date,
+  start2: Date, end2: Date
+): boolean {
+  // Check if two time periods overlap
+  // Two periods overlap if: start1 < end2 AND start2 < end1
+  return start1 < end2 && start2 < end1;
 }

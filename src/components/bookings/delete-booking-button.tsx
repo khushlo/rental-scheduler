@@ -50,7 +50,7 @@ export function DeleteBookingButton({ booking, onBookingDeleted }: DeleteBooking
 
   const checkDeleteValidation = async () => {
     try {
-      const response = await fetch(`/api/bookings?id=${booking.id}`, {
+      const response = await fetch(`/api/bookings/${booking.id}`, {
         method: 'DELETE',
       });
 

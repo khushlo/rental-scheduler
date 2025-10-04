@@ -8,27 +8,58 @@ export async function GET(request: NextRequest) {
     const productId = searchParams.get('productId')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
+    const startTime = searchParams.get('startTime')
+    const endTime = searchParams.get('endTime')
     const quantity = searchParams.get('quantity')
+    const excludeBookingId = searchParams.get('excludeBookingId')
 
     if (!productId || !startDate || !endDate) {
       return NextResponse.json({ error: 'productId, startDate, and endDate are required' }, { status: 400 })
     }
 
+    // Validate time parameters - if one is provided, both should be provided
+    if ((startTime && !endTime) || (!startTime && endTime)) {
+      return NextResponse.json({ error: 'Both startTime and endTime must be provided when using time-based checking' }, { status: 400 })
+    }
+
+    // Create DateTime objects for precise time-based comparisons
     const start = new Date(startDate)
     const end = new Date(endDate)
+    
+    // If times are provided, create full DateTime objects
+    let requestStartDateTime = start
+    let requestEndDateTime = end
+    
+    if (startTime) {
+      const [hours, minutes] = startTime.split(':').map(Number)
+      requestStartDateTime = new Date(start)
+      requestStartDateTime.setHours(hours, minutes, 0, 0)
+    }
+    
+    if (endTime) {
+      const [hours, minutes] = endTime.split(':').map(Number)
+      requestEndDateTime = new Date(end)
+      requestEndDateTime.setHours(hours, minutes, 0, 0)
+    }
+
     const requestedQuantity = quantity ? parseInt(quantity) : 1
     const numericProductId = parseInt(productId, 10)
+    const numericExcludeBookingId = excludeBookingId ? parseInt(excludeBookingId, 10) : null
 
     if (isNaN(numericProductId) || numericProductId <= 0) {
       return NextResponse.json({ error: 'Invalid productId' }, { status: 400 })
+    }
+
+    if (excludeBookingId && (isNaN(numericExcludeBookingId!) || numericExcludeBookingId! <= 0)) {
+      return NextResponse.json({ error: 'Invalid excludeBookingId' }, { status: 400 })
     }
 
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
       return NextResponse.json({ error: 'Invalid date format' }, { status: 400 })
     }
 
-    if (start >= end) {
-      return NextResponse.json({ error: 'Start date must be before end date' }, { status: 400 })
+    if (requestStartDateTime >= requestEndDateTime) {
+      return NextResponse.json({ error: 'Start date/time must be before end date/time' }, { status: 400 })
     }
 
     // Get product details
@@ -52,8 +83,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Check overlapping bookings (exclude completed and cancelled bookings)
-    const overlappingBookings = await prisma.booking.findMany({
+    // For time-aware checking, we need to get all potentially overlapping bookings
+    // and then filter them based on actual time overlaps
+    const potentiallyOverlappingBookings = await prisma.booking.findMany({
       where: {
+        // Exclude the current booking if editing
+        ...(numericExcludeBookingId && {
+          id: {
+            not: numericExcludeBookingId
+          }
+        }),
         items: {
           some: {
             productId: numericProductId
@@ -62,12 +101,12 @@ export async function GET(request: NextRequest) {
         AND: [
           {
             startDate: {
-              lte: end,
+              lte: end, // Use date-only for initial filter
             }
           },
           {
             endDate: {
-              gte: start,
+              gte: start, // Use date-only for initial filter
             }
           }
         ]
@@ -83,6 +122,27 @@ export async function GET(request: NextRequest) {
         }
       },
       orderBy: { startDate: 'asc' }
+    })
+
+    // Filter for actual time-based overlaps if times are provided
+    const overlappingBookings = potentiallyOverlappingBookings.filter(booking => {
+      // If no times provided for the request, use date-only logic (backward compatibility)
+      if (!startTime || !endTime) {
+        return true // Keep all date-overlapping bookings
+      }
+
+      // Create DateTime objects for existing booking
+      const bookingStart = new Date(booking.startDate)
+      const [bookingStartHours, bookingStartMinutes] = booking.startTime.split(':').map(Number)
+      bookingStart.setHours(bookingStartHours, bookingStartMinutes, 0, 0)
+
+      const bookingEnd = new Date(booking.endDate)
+      const [bookingEndHours, bookingEndMinutes] = booking.endTime.split(':').map(Number)
+      bookingEnd.setHours(bookingEndHours, bookingEndMinutes, 0, 0)
+
+      // Check for time overlap using DateTime comparison
+      // Two time periods overlap if: start1 < end2 AND start2 < end1
+      return requestStartDateTime < bookingEnd && bookingStart < requestEndDateTime
     })
 
     // Calculate booked quantity from non-completed/non-cancelled bookings
@@ -107,6 +167,15 @@ export async function GET(request: NextRequest) {
       availableQuantity,
       totalquantity: product.quantity,
       bookedQuantity,
+      timeAware: !!(startTime && endTime), // Indicate if time-based checking was used
+      requestPeriod: {
+        startDate: startDate,
+        endDate: endDate,
+        startTime: startTime || null,
+        endTime: endTime || null,
+        startDateTime: requestStartDateTime.toISOString(),
+        endDateTime: requestEndDateTime.toISOString()
+      },
       conflictingBookings: overlappingBookings
         .filter(booking => {
           const status = calculateBookingStatus(booking.startDate, booking.endDate)
@@ -116,6 +185,8 @@ export async function GET(request: NextRequest) {
           id: booking.id,
           startDate: booking.startDate,
           endDate: booking.endDate,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
           customer: booking.customer.name,
           customerPhone: booking.customer.phone1,
           quantity: booking.items.reduce((sum: number, item: any) => sum + item.quantity, 0),
@@ -140,17 +211,41 @@ export async function POST(request: NextRequest) {
 
     const results = await Promise.all(
       checks.map(async (check: any) => {
-        const { productId, startDate, endDate, quantity = 1 } = check
+        const { productId, startDate, endDate, startTime, endTime, quantity = 1 } = check
 
         try {
           const start = new Date(startDate)
           const end = new Date(endDate)
 
-          if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
+          if (isNaN(start.getTime()) || isNaN(end.getTime())) {
             return {
               productId,
               available: false,
               error: 'Invalid dates'
+            }
+          }
+
+          // Create DateTime objects for precise time-based comparisons
+          let requestStartDateTime = start
+          let requestEndDateTime = end
+          
+          if (startTime) {
+            const [hours, minutes] = startTime.split(':').map(Number)
+            requestStartDateTime = new Date(start)
+            requestStartDateTime.setHours(hours, minutes, 0, 0)
+          }
+          
+          if (endTime) {
+            const [hours, minutes] = endTime.split(':').map(Number)
+            requestEndDateTime = new Date(end)
+            requestEndDateTime.setHours(hours, minutes, 0, 0)
+          }
+
+          if (requestStartDateTime >= requestEndDateTime) {
+            return {
+              productId,
+              available: false,
+              error: 'Invalid date/time range'
             }
           }
 
@@ -180,7 +275,27 @@ export async function POST(request: NextRequest) {
             }
           })
 
-          const bookedQuantity = overlappingBookings.reduce((total, booking) => {
+          // Filter for actual time-based overlaps if times are provided
+          const filteredBookings = overlappingBookings.filter(booking => {
+            // If no times provided for the request, use date-only logic
+            if (!startTime || !endTime) {
+              return true
+            }
+
+            // Create DateTime objects for existing booking
+            const bookingStart = new Date(booking.startDate)
+            const [bookingStartHours, bookingStartMinutes] = booking.startTime.split(':').map(Number)
+            bookingStart.setHours(bookingStartHours, bookingStartMinutes, 0, 0)
+
+            const bookingEnd = new Date(booking.endDate)
+            const [bookingEndHours, bookingEndMinutes] = booking.endTime.split(':').map(Number)
+            bookingEnd.setHours(bookingEndHours, bookingEndMinutes, 0, 0)
+
+            // Check for time overlap
+            return requestStartDateTime < bookingEnd && bookingStart < requestEndDateTime
+          })
+
+          const bookedQuantity = filteredBookings.reduce((total, booking) => {
             const status = calculateBookingStatus(booking.startDate, booking.endDate)
             // Only count bookings that are confirmed or active
             if (status === 'confirmed' || status === 'active') {
@@ -200,7 +315,8 @@ export async function POST(request: NextRequest) {
             product: product.name,
             availableQuantity,
             totalquantity: product.quantity,
-            requestedQuantity: quantity
+            requestedQuantity: quantity,
+            timeAware: !!(startTime && endTime)
           }
         } catch (error) {
           return {
