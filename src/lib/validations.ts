@@ -76,11 +76,6 @@ export const BookingSearchSchema = z.object({
   endDate: z.date().optional(),
 })
 
-export const IdLookupSchema = z.object({
-  id: IdSchema,
-  type: z.enum(["booking", "customer", "product"]),
-})
-
 // Availability check schema
 export const AvailabilityCheckSchema = z.object({
   productId: ProductIdSchema,
@@ -126,5 +121,4 @@ export type Customer = z.infer<typeof CustomerSchema>
 export type BookingItem = z.infer<typeof BookingItemSchema>
 export type Booking = z.infer<typeof BookingSchema>
 export type BookingSearch = z.infer<typeof BookingSearchSchema>
-export type IdLookup = z.infer<typeof IdLookupSchema>
 export type AvailabilityCheck = z.infer<typeof AvailabilityCheckSchema>

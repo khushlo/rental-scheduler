@@ -1,62 +1,129 @@
 [
   {
-    "name": "Chhab - 3 Round",
+    "name": "Chhab 1 - ",
     "quantity": 7,
     "rentPrice": 150,
     "status": true
   },
   {
-    "name": "Chhab - Golden set",
+    "name": "Chhab 2 - ",
     "quantity": 7,
     "rentPrice": 150,
     "status": true
   },
   {
-    "name": "Chhab - Pink Set",
+    "name": "Chhab 3 - ",
     "quantity": 7,
     "rentPrice": 150,
     "status": true
   },
   {
-    "name": "Chhab - Blue Set",
+    "name": "Chhab 3 - ",
     "quantity": 7,
     "rentPrice": 150,
     "status": true
   },
   {
-    "name": "Chhab - Rajwadi",
+    "name": "Chhab 4 - ",
     "quantity": 7,
     "rentPrice": 150,
     "status": true
   },
   {
-    "name": "Kankupagla tray",
-    "quantity": 1,
-    "rentPrice": 200,
+    "name": "Chhab 5 - ",
+    "quantity": 7,
+    "rentPrice": 150,
     "status": true
   },
   {
-    "name": "Mold - Hand",
-    "quantity": 6,
+    "name": "Chhab 6 - ",
+    "quantity": 7,
+    "rentPrice": 150,
+    "status": true
+  },
+  {
+    "name": "Chhab 7 - ",
+    "quantity": 7,
+    "rentPrice": 150,
+    "status": true
+  },
+  {
+    "name": "Chhab 8 - ",
+    "quantity": 7,
+    "rentPrice": 150,
+    "status": true
+  },
+  {
+    "name": "Mold - Kangan",
+    "quantity": 4,
+    "rentPrice": 0,
+    "status": true
+  }, 
+  {
+    "name": "Mold - Payal",
+    "quantity": 4,
     "rentPrice": 0,
     "status": true
   },
   {
-    "name": "Mold - Legs",
-    "quantity": 8,
-    "rentPrice": 0,
-    "status": true
-  },
-  {
-    "name": "Mold - Bracelet",
+    "name": "Mold - Har",
     "quantity": 4,
     "rentPrice": 0,
     "status": true
   },
   {
     "name": "Dhingli",
-    "quantity": 7,
+    "quantity": 4,
     "rentPrice": 0,
     "status": true
+  },
+  {
+    "name": "Haldi - 2 Round",
+    "quantity": 1,
+    "rentPrice": 300,
+    "status": true
+  },
+  {
+    "name": "Haldi - Radha Krishna",
+    "quantity": 1,
+    "rentPrice": 350,
+    "status": true
+  },
+  {
+    "name": "Haldi - Old",
+    "quantity": 1,
+    "rentPrice": 400,
+    "status": true
+  },
+  {
+    "name": "Haldi - ",
+    "quantity": 1,
+    "rentPrice": 300,
+    "status": true
+  },
+  {
+    "name": "Engm - Square White",
+    "quantity": 1,
+    "rentPrice": 400,
+    "status": true
+  },
+  {
+    "name": "Engm - Dry Flower",
+    "quantity": 1,
+    "rentPrice": 300,
+    "status": true
+  },
+  {
+    "name": "Engm - White",
+    "quantity": 1,
+    "rentPrice": 300,
+    "status": true
+  },
+  {
+    "name": "Train",
+    "quantity": 1,
+    "rentPrice": 2500,
+    "status": true
   }
+
 ]

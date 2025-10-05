@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Calendar, Package, Users, Home, Search } from 'lucide-react';
+import { Calendar, Package, Users, Home, FileText } from 'lucide-react';
 import { SimpleToggle } from '@/components/ui/theme-toggle-shadcn';
 
 const navigation = [
@@ -33,9 +33,9 @@ const navigation = [
     icon: Calendar,
   },
   {
-    name: 'ID Lookup',
-    href: '/lookup',
-    icon: Search,
+    name: 'Reports',
+    href: '/reports',
+    icon: FileText,
   },
 ];
 

@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
-import { Calendar, X, Eye, Search } from 'lucide-react';
+import { Calendar, X, Eye, Search, FileText } from 'lucide-react';
 import { DataGrid, Column } from '@/components/ui/data-grid';
 import { AddBookingForm } from './add-booking-form';
 import { EditBookingForm } from './edit-booking-form';
@@ -52,6 +53,12 @@ interface Booking {
 export function BookingsDataGrid() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  // Function to navigate to invoice page
+  const handleGenerateInvoice = (booking: Booking) => {
+    router.push(`/bookings/invoice/${booking.id}`);
+  };
 
   useEffect(() => {
     fetchBookings();
@@ -130,7 +137,14 @@ export function BookingsDataGrid() {
         <span className="font-medium text-green-600 text-lg">
           ₹{booking.totalAmount.toFixed(2)}
         </span>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1">
+          <button
+            onClick={() => handleGenerateInvoice(booking)}
+            className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
+            title="Generate Invoice"
+          >
+            <FileText className="h-4 w-4" />
+          </button>
           <EditBookingForm 
             booking={booking} 
             onBookingUpdated={fetchBookings}
@@ -253,9 +267,16 @@ export function BookingsDataGrid() {
     {
       key: 'actions',
       header: 'Actions',
-      width: '8%',
+      width: '12%',
       render: (booking) => (
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1">
+          <button
+            onClick={() => handleGenerateInvoice(booking)}
+            className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
+            title="Generate Invoice"
+          >
+            <FileText className="h-4 w-4" />
+          </button>
           <EditBookingForm 
             booking={booking} 
             onBookingUpdated={fetchBookings}
@@ -288,6 +309,8 @@ export function BookingsDataGrid() {
         emptyMessage="No bookings found. Create your first booking to get started."
         renderCard={renderBookingCard}
       />
+
+
     </div>
   );
 }
