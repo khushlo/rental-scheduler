@@ -6,7 +6,7 @@ import { calculateBookingStatus } from '@/lib/utils'
 export async function GET() {
   try {
     const products = await prisma.product.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { name: 'asc' },
       include: {
         _count: {
           select: { bookingItems: true }
