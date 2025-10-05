@@ -871,8 +871,19 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
                         <input
                           type="number"
                           min="1"
-                          value={item.quantity}
-                          onChange={(e) => updateBookingItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                          value={item.quantity || ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === '') {
+                              // Allow empty state temporarily, will be validated on submit
+                              updateBookingItem(index, 'quantity', 0);
+                            } else {
+                              const numValue = parseInt(value, 10);
+                              if (!isNaN(numValue) && numValue >= 1) {
+                                updateBookingItem(index, 'quantity', numValue);
+                              }
+                            }
+                          }}
                           disabled={isSubmitting}
                           className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
                         />
@@ -886,8 +897,19 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
                           type="number"
                           step="0.01"
                           min="0"
-                          value={item.pricePerDay}
-                          onChange={(e) => updateBookingItem(index, 'pricePerDay', parseFloat(e.target.value) || 0)}
+                          value={item.pricePerDay || ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === '') {
+                              // Allow empty state temporarily
+                              updateBookingItem(index, 'pricePerDay', 0);
+                            } else {
+                              const numValue = parseFloat(value);
+                              if (!isNaN(numValue) && numValue >= 0) {
+                                updateBookingItem(index, 'pricePerDay', numValue);
+                              }
+                            }
+                          }}
                           disabled={isSubmitting}
                           className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
                         />
@@ -901,8 +923,19 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
                           type="number"
                           step="0.01"
                           min="0"
-                          value={item.subtotal}
-                          onChange={(e) => updateBookingItem(index, 'subtotal', parseFloat(e.target.value) || 0)}
+                          value={item.subtotal || ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (value === '') {
+                              // Allow empty state temporarily
+                              updateBookingItem(index, 'subtotal', 0);
+                            } else {
+                              const numValue = parseFloat(value);
+                              if (!isNaN(numValue) && numValue >= 0) {
+                                updateBookingItem(index, 'subtotal', numValue);
+                              }
+                            }
+                          }}
                           disabled={isSubmitting}
                           className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
                           title="Enter custom subtotal (overrides auto-calculated value)"
@@ -1000,8 +1033,19 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
                 <input
                   type="number"
                   step="0.01"
-                  value={formData.totalAmount || calculateTotal()}
-                  onChange={(e) => setFormData(prev => ({ ...prev, totalAmount: parseFloat(e.target.value) || 0 }))}
+                  value={formData.totalAmount || calculateTotal() || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '') {
+                      // Allow empty state temporarily
+                      setFormData(prev => ({ ...prev, totalAmount: 0 }));
+                    } else {
+                      const numValue = parseFloat(value);
+                      if (!isNaN(numValue) && numValue >= 0) {
+                        setFormData(prev => ({ ...prev, totalAmount: numValue }));
+                      }
+                    }
+                  }}
                   disabled={isSubmitting}
                   className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
                 />
@@ -1015,8 +1059,19 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
                   type="number"
                   step="0.01"
                   min="0"
-                  value={formData.advancePayment}
-                  onChange={(e) => setFormData(prev => ({ ...prev, advancePayment: parseFloat(e.target.value) || 0 }))}
+                  value={formData.advancePayment || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '') {
+                      // Allow empty state temporarily
+                      setFormData(prev => ({ ...prev, advancePayment: 0 }));
+                    } else {
+                      const numValue = parseFloat(value);
+                      if (!isNaN(numValue) && numValue >= 0) {
+                        setFormData(prev => ({ ...prev, advancePayment: numValue }));
+                      }
+                    }
+                  }}
                   disabled={isSubmitting}
                   className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
                 />

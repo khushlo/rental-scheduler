@@ -50,36 +50,11 @@ interface Booking {
 
 export function BookingsDataGrid() {
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchBookings();
   }, []);
-
-  useEffect(() => {
-    if (!searchTerm) {
-      setFilteredBookings(bookings);
-    } else {
-      const filtered = bookings.filter(booking => {
-        const term = searchTerm.toLowerCase();
-        return (
-          booking.id.toString().includes(term) ||
-          booking.customerId.toString().includes(term) ||
-          booking.customer.name.toLowerCase().includes(term) ||
-          booking.customer.phone1.toLowerCase().includes(term) ||
-          (booking.customer.phone2 && booking.customer.phone2.toLowerCase().includes(term)) ||
-          booking.items.some(item => 
-            item.productId.toString().includes(term) ||
-            item.product.name.toLowerCase().includes(term) ||
-            item.product.id.toString().includes(term)
-          )
-        );
-      });
-      setFilteredBookings(filtered);
-    }
-  }, [bookings, searchTerm]);
 
   const fetchBookings = async () => {
     try {
@@ -88,7 +63,6 @@ export function BookingsDataGrid() {
       if (response.ok) {
         const data = await response.json();
         setBookings(data);
-        setFilteredBookings(data);
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
@@ -282,11 +256,10 @@ export function BookingsDataGrid() {
       </div>
 
       <DataGrid
-        data={filteredBookings}
+        data={bookings}
         columns={columns}
         pageSize={50}
         searchPlaceholder="Search by Booking ID, Customer ID, Product ID, names, or status..."
-        onSearch={setSearchTerm}
         loading={loading}
         emptyMessage="No bookings found. Create your first booking to get started."
         renderCard={renderBookingCard}

@@ -53,15 +53,25 @@ export function DataGrid<T extends Record<string, any>>({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const totalPages = Math.ceil(data.length / pageSize);
+  // Filter data based on search term
+  const filteredData = searchTerm ? data.filter(item => {
+    const searchLower = searchTerm.toLowerCase();
+    return Object.values(item).some(value => 
+      String(value).toLowerCase().includes(searchLower)
+    );
+  }) : data;
+
+  const totalPages = Math.ceil(filteredData.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, data.length);
-  const currentData = data.slice(startIndex, endIndex);
+  const endIndex = Math.min(startIndex + pageSize, filteredData.length);
+  const currentData = filteredData.slice(startIndex, endIndex);
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     setCurrentPage(1);
-    onSearch?.(value);
+    if (onSearch) {
+      onSearch(value);
+    }
   };
 
   const handlePageChange = (page: number) => {
@@ -234,10 +244,11 @@ export function DataGrid<T extends Record<string, any>>({
       </div>
 
       {/* Pagination - Mobile optimized */}
-      {data.length > 0 && (
+      {filteredData.length > 0 && (
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center px-3 sm:px-0">
           <div className="text-sm text-gray-700 dark:text-gray-300 text-center sm:text-left">
-            Showing {startIndex + 1} to {endIndex} of {data.length} results
+            Showing {startIndex + 1} to {endIndex} of {filteredData.length} results
+            {searchTerm && ` (filtered from ${data.length} total)`}
           </div>
           
           {totalPages > 1 && (

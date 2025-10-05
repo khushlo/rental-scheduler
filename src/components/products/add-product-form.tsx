@@ -151,7 +151,7 @@ export function AddProductForm({ onProductAdded }: AddProductFormProps) {
                     type="number"
                     id="quantity"
                     min="0"
-                    value={formData.quantity === 0 ? '' : formData.quantity}
+                    value={formData.quantity || ''}
                     onChange={(e) => {
                       const value = e.target.value;
                       if (value === '') {
@@ -181,7 +181,7 @@ export function AddProductForm({ onProductAdded }: AddProductFormProps) {
                     id="rentPrice"
                     min="0"
                     step="0.01"
-                    value={formData.rentPrice === 0 ? '' : formData.rentPrice}
+                    value={formData.rentPrice || ''}
                     onChange={(e) => {
                       const value = e.target.value;
                       if (value === '') {

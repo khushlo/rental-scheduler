@@ -20,28 +20,11 @@ interface Product {
 
 export function ProductsDataGrid() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchProducts();
   }, []);
-
-  useEffect(() => {
-    if (!searchTerm) {
-      setFilteredProducts(products);
-    } else {
-      const filtered = products.filter(product => {
-        const term = searchTerm.toLowerCase();
-        return (
-          product.id.toString().includes(term) ||
-          product.name.toLowerCase().includes(term)
-        );
-      });
-      setFilteredProducts(filtered);
-    }
-  }, [products, searchTerm]);
 
   const fetchProducts = async () => {
     try {
@@ -50,7 +33,6 @@ export function ProductsDataGrid() {
       if (response.ok) {
         const data = await response.json();
         setProducts(data);
-        setFilteredProducts(data);
       }
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -77,10 +59,10 @@ export function ProductsDataGrid() {
       header: 'Product Name',
       width: '30%',
       render: (product) => (
-        <div className="font-medium text-gray-900 dark:text-gray-100">{product.name}</div>
+        <div className="font-medium text-gray-900">{product.name}</div>
       ),
       mobileRender: (product) => (
-        <div className="font-medium text-gray-900 dark:text-gray-100">{product.name}</div>
+        <div className="font-medium text-gray-900">{product.name}</div>
       )
     },
     {
@@ -164,11 +146,10 @@ export function ProductsDataGrid() {
       </div>
 
       <DataGrid
-        data={filteredProducts}
+        data={products}
         columns={columns}
         pageSize={50}
-        searchPlaceholder="Search by Product ID, name, description, or category..."
-        onSearch={setSearchTerm}
+        searchPlaceholder="Search by Product ID, name..."
         loading={loading}
         emptyMessage="No products found. Add your first product to get started."
       />

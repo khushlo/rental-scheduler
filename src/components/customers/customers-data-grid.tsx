@@ -24,31 +24,11 @@ interface Customer {
 
 export function CustomersDataGrid() {
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchCustomers();
   }, []);
-
-  useEffect(() => {
-    if (!searchTerm) {
-      setFilteredCustomers(customers);
-    } else {
-      const filtered = customers.filter(customer => {
-        const term = searchTerm.toLowerCase();
-        return (
-          customer.id.toString().includes(term) ||
-          customer.name.toLowerCase().includes(term) ||
-          customer.phone1.toLowerCase().includes(term) ||
-          customer.phone2?.toLowerCase().includes(term) ||
-          customer.address?.toLowerCase().includes(term)
-        );
-      });
-      setFilteredCustomers(filtered);
-    }
-  }, [customers, searchTerm]);
 
   const fetchCustomers = async () => {
     try {
@@ -57,7 +37,6 @@ export function CustomersDataGrid() {
       if (response.ok) {
         const data = await response.json();
         setCustomers(data);
-        setFilteredCustomers(data);
       }
     } catch (error) {
       console.error('Error fetching customers:', error);
@@ -161,11 +140,10 @@ export function CustomersDataGrid() {
       </div>
 
       <DataGrid
-        data={filteredCustomers}
+        data={customers}
         columns={columns}
         pageSize={50}
-        searchPlaceholder="Search by Customer ID, name, email, phone, or address..."
-        onSearch={setSearchTerm}
+        searchPlaceholder="Search by Customer ID, name, phone, or address..."
         loading={loading}
         emptyMessage="No customers found. Add your first customer to get started."
       />

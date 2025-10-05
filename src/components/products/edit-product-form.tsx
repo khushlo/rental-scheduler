@@ -151,10 +151,11 @@ export function EditProductForm({ product, onProductUpdated }: EditProductFormPr
                     type="number"
                     id="edit-quantity"
                     min="0"
-                    value={formData.quantity === 0 ? '' : formData.quantity}
+                    value={formData.quantity || ''}
                     onChange={(e) => {
                       const value = e.target.value;
                       if (value === '') {
+                        // Allow empty state temporarily
                         handleInputChange('quantity', 0);
                       } else {
                         const numValue = parseInt(value, 10);
@@ -181,7 +182,7 @@ export function EditProductForm({ product, onProductUpdated }: EditProductFormPr
                     id="edit-rentPrice"
                     min="0"
                     step="0.01"
-                    value={formData.rentPrice === 0 ? '' : formData.rentPrice}
+                    value={formData.rentPrice || ''}
                     onChange={(e) => {
                       const value = e.target.value;
                       if (value === '') {
