@@ -57,6 +57,10 @@ export function EditBookingForm({ booking, onBookingUpdated }: EditBookingFormPr
   const transformedBooking = {
     ...booking,
     advancePayment: booking.advancePayment || 0,
+    startDate: booking.startDate.split('T')[0],
+    endDate: booking.endDate.split('T')[0],
+    startTime: booking.startTime || '09:00',
+    endTime: booking.endTime || '17:00',
     // Transform items to match the expected format
     items: booking.items.map(item => ({
       productId: item.productId,

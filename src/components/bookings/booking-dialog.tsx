@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, X, UserPlus, MessageSquare, RefreshCw } from 'lucide-react';
+import { Plus, X, UserPlus, MessageSquare, RefreshCw, Package } from 'lucide-react';
 
 interface Customer {
   id: number;
@@ -77,6 +77,29 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
   const [itemAvailability, setItemAvailability] = useState<ItemAvailability>({});
   const [validationTimeout, setValidationTimeout] = useState<NodeJS.Timeout | null>(null);
   const [expandedNotes, setExpandedNotes] = useState(new Set<number>());
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
+  
+  // Customer form state
+  const [customerFormData, setCustomerFormData] = useState({
+    name: '',
+    phone1: '',
+    phone2: '',
+    address: '',
+    notes: ''
+  });
+  const [customerFormSubmitting, setCustomerFormSubmitting] = useState(false);
+  const [customerFormError, setCustomerFormError] = useState<string | null>(null);
+  
+  // Product form state
+  const [productFormData, setProductFormData] = useState({
+    name: '',
+    quantity: 1,
+    rentPrice: 0,
+    status: true
+  });
+  const [productFormSubmitting, setProductFormSubmitting] = useState(false);
+  const [productFormError, setProductFormError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     startDate: booking?.startDate || new Date().toISOString().split('T')[0],
@@ -286,6 +309,111 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
     return !!(formData.items[index]?.notes && formData.items[index].notes!.trim() !== '');
   };
 
+  const handleProductAdded = () => {
+    setShowAddProduct(false);
+    fetchProducts(); // Refresh products list
+  };
+
+  const handleCustomerAdded = () => {
+    setShowAddCustomer(false);
+    // Optionally refresh customer suggestions or perform other actions
+  };
+
+  const handleCustomerFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCustomerFormSubmitting(true);
+    setCustomerFormError(null);
+
+    try {
+      const response = await fetch('/api/customers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: customerFormData.name.trim(),
+          phone1: customerFormData.phone1.trim(),
+          phone2: customerFormData.phone2.trim() || undefined,
+          address: customerFormData.address.trim() || undefined,
+          notes: customerFormData.notes.trim() || undefined,
+        }),
+      });
+
+      if (response.ok) {
+        const newCustomer = await response.json();
+        setCustomerFormData({
+          name: '',
+          phone1: '',
+          phone2: '',
+          address: '',
+          notes: ''
+        });
+        setShowAddCustomer(false);
+        // Auto-select the newly created customer
+        setSelectedCustomer(newCustomer);
+        setCustomerSearchTerm(newCustomer.name);
+      } else {
+        const errorData = await response.json();
+        setCustomerFormError(errorData.error || 'Failed to create customer');
+      }
+    } catch (error) {
+      console.error('Error creating customer:', error);
+      setCustomerFormError('Failed to create customer. Please try again.');
+    } finally {
+      setCustomerFormSubmitting(false);
+    }
+  };
+
+  const handleProductFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate form
+    if (!productFormData.name.trim()) {
+      setProductFormError('Product name is required');
+      return;
+    }
+    if (productFormData.quantity < 0) {
+      setProductFormError('Quantity must be non-negative');
+      return;
+    }
+    if (productFormData.rentPrice < 0) {
+      setProductFormError('Rent price must be non-negative');
+      return;
+    }
+
+    setProductFormSubmitting(true);
+    setProductFormError(null);
+
+    try {
+      const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(productFormData),
+      });
+
+      if (response.ok) {
+        setProductFormData({
+          name: '',
+          quantity: 1,
+          rentPrice: 0,
+          status: true,
+        });
+        setShowAddProduct(false);
+        fetchProducts(); // Refresh products list
+      } else {
+        const errorData = await response.json();
+        setProductFormError(errorData.error || 'Failed to create product');
+      }
+    } catch (error) {
+      console.error('Error creating product:', error);
+      setProductFormError('Failed to create product. Please try again.');
+    } finally {
+      setProductFormSubmitting(false);
+    }
+  };
+
   const toggleNoteExpansion = (index: number) => {
     setExpandedNotes(prev => {
       const newSet = new Set(prev);
@@ -343,7 +471,8 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
 
       // Auto-calculate subtotal when quantity or pricePerDay changes
       if (field === 'quantity' || field === 'pricePerDay') {
-        const days = Math.ceil((new Date(prev.endDate).getTime() - new Date(prev.startDate).getTime()) / (1000 * 60 * 60 * 24)) || 1;
+        // const days = Math.ceil((new Date(prev.endDate).getTime() - new Date(prev.startDate).getTime()) / (1000 * 60 * 60 * 24)) || 1;
+        const days = 1; // Hardcoded to 1 day for time-aware bookings
         const autoCalculatedSubtotal = newItems[index].quantity * newItems[index].pricePerDay * days;
         newItems[index].subtotal = autoCalculatedSubtotal;
       }
@@ -353,7 +482,8 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
         const selectedProduct = products.find(p => p.id === value);
         if (selectedProduct) {
           newItems[index].pricePerDay = selectedProduct.rentPrice;
-          const days = Math.ceil((new Date(prev.endDate).getTime() - new Date(prev.startDate).getTime()) / (1000 * 60 * 60 * 24)) || 1;
+          // const days = Math.ceil((new Date(prev.endDate).getTime() - new Date(prev.startDate).getTime()) / (1000 * 60 * 60 * 24)) || 1;
+          const days = 1; // Hardcoded to 1 day for time-aware bookings
           newItems[index].subtotal = newItems[index].quantity * selectedProduct.rentPrice * days;
         }
       }
@@ -461,7 +591,7 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 z-50">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-600">
           <div>
@@ -519,6 +649,15 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
                     </button>
                   )}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAddCustomer(true)}
+                  disabled={isSubmitting}
+                  className="inline-flex items-center p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                  title="Add new customer"
+                >
+                  <UserPlus size={16} />
+                </button>
               </div>
 
               {/* Customer Search Results */}
@@ -658,19 +797,30 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Product <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        value={item.productId}
-                        onChange={(e) => updateBookingItem(index, 'productId', parseInt(e.target.value))}
-                        disabled={isSubmitting}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
-                      >
-                        <option value={0}>Select a product</option>
-                        {products.map((product) => (
-                          <option key={product.id} value={product.id}>
-                            {product.name} (₹{product.rentPrice}/day) - Stock: {product.quantity}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={item.productId}
+                          onChange={(e) => updateBookingItem(index, 'productId', parseInt(e.target.value))}
+                          disabled={isSubmitting}
+                          className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
+                        >
+                          <option value={0}>Select a product</option>
+                          {products.map((product) => (
+                            <option key={product.id} value={product.id}>
+                              {product.name} (₹{product.rentPrice}/day) - Stock: {product.quantity}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddProduct(true)}
+                          disabled={isSubmitting}
+                          className="inline-flex items-center p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                          title="Add new product"
+                        >
+                          <Package size={16} />
+                        </button>
+                      </div>
                     </div>
                     
                     {/* Availability Error Display */}
@@ -916,6 +1066,251 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
           </div>
         </form>
       </div>
+
+      {/* Add Product Dialog */}
+      {showAddProduct && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-600">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Add New Product
+              </h3>
+              <button
+                onClick={() => {
+                  setShowAddProduct(false);
+                  setProductFormError(null);
+                  setProductFormData({ name: '', quantity: 1, rentPrice: 0, status: true });
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleProductFormSubmit} className="p-6 space-y-4">
+              {productFormError && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 px-3 py-2 rounded-lg text-sm">
+                  {productFormError}
+                </div>
+              )}
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Product Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={productFormData.name}
+                  onChange={(e) => setProductFormData(prev => ({ ...prev, name: e.target.value }))}
+                  disabled={productFormSubmitting}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
+                  placeholder="Enter product name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Quantity
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={productFormData.quantity}
+                  onChange={(e) => setProductFormData(prev => ({ ...prev, quantity: parseInt(e.target.value) || 0 }))}
+                  disabled={productFormSubmitting}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Rent Price (₹/day)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={productFormData.rentPrice}
+                  onChange={(e) => setProductFormData(prev => ({ ...prev, rentPrice: parseFloat(e.target.value) || 0 }))}
+                  disabled={productFormSubmitting}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
+                />
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="productStatus"
+                  checked={productFormData.status}
+                  onChange={(e) => setProductFormData(prev => ({ ...prev, status: e.target.checked }))}
+                  disabled={productFormSubmitting}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
+                />
+                <label htmlFor="productStatus" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  Active
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddProduct(false);
+                    setProductFormError(null);
+                    setProductFormData({ name: '', quantity: 1, rentPrice: 0, status: true });
+                  }}
+                  disabled={productFormSubmitting}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={productFormSubmitting}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg disabled:opacity-50 flex items-center gap-2"
+                >
+                  {productFormSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Product'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Customer Dialog */}
+      {showAddCustomer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-600">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Add New Customer
+              </h3>
+              <button
+                onClick={() => {
+                  setShowAddCustomer(false);
+                  setCustomerFormError(null);
+                  setCustomerFormData({ name: '', phone1: '', phone2: '', address: '', notes: '' });
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleCustomerFormSubmit} className="p-6 space-y-4">
+              {customerFormError && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 px-3 py-2 rounded-lg text-sm">
+                  {customerFormError}
+                </div>
+              )}
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Customer Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={customerFormData.name}
+                  onChange={(e) => setCustomerFormData(prev => ({ ...prev, name: e.target.value }))}
+                  disabled={customerFormSubmitting}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
+                  placeholder="Enter customer name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Primary Phone <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  value={customerFormData.phone1}
+                  onChange={(e) => setCustomerFormData(prev => ({ ...prev, phone1: e.target.value }))}
+                  disabled={customerFormSubmitting}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
+                  placeholder="Enter primary phone number"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Secondary Phone
+                </label>
+                <input
+                  type="tel"
+                  value={customerFormData.phone2}
+                  onChange={(e) => setCustomerFormData(prev => ({ ...prev, phone2: e.target.value }))}
+                  disabled={customerFormSubmitting}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
+                  placeholder="Enter secondary phone number (optional)"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Address
+                </label>
+                <input
+                  type="text"
+                  value={customerFormData.address}
+                  onChange={(e) => setCustomerFormData(prev => ({ ...prev, address: e.target.value }))}
+                  disabled={customerFormSubmitting}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
+                  placeholder="Enter address (optional)"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Notes
+                </label>
+                <textarea
+                  value={customerFormData.notes}
+                  onChange={(e) => setCustomerFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  disabled={customerFormSubmitting}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50 resize-none"
+                  rows={3}
+                  placeholder="Enter any notes (optional)"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddCustomer(false);
+                    setCustomerFormError(null);
+                    setCustomerFormData({ name: '', phone1: '', phone2: '', address: '', notes: '' });
+                  }}
+                  disabled={customerFormSubmitting}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={customerFormSubmitting || !customerFormData.name.trim() || !customerFormData.phone1.trim()}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg disabled:opacity-50 flex items-center gap-2"
+                >
+                  {customerFormSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    'Create Customer'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
