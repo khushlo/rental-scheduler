@@ -77,10 +77,10 @@ export function ProductsDataGrid() {
       header: 'Product Name',
       width: '30%',
       render: (product) => (
-        <div className="font-medium text-gray-900 dark:text-gray-700">{product.name}</div>
+        <div className="font-medium text-gray-900 dark:text-gray-100">{product.name}</div>
       ),
       mobileRender: (product) => (
-        <div className="font-medium text-gray-900 dark:text-gray-700">{product.name}</div>
+        <div className="font-medium text-gray-900 dark:text-gray-100">{product.name}</div>
       )
     },
     {
