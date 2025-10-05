@@ -32,6 +32,7 @@ interface Booking {
   endDate: string;
   startTime: string;
   endTime: string;
+  eventDate?: string;  // Optional event date
   totalAmount: number;
   advancePayment?: number;
   status: string;
@@ -59,6 +60,7 @@ export function EditBookingForm({ booking, onBookingUpdated }: EditBookingFormPr
     advancePayment: booking.advancePayment || 0,
     startDate: booking.startDate.split('T')[0],
     endDate: booking.endDate.split('T')[0],
+    eventDate: booking.eventDate ? booking.eventDate.split('T')[0] : '',  // Handle optional eventDate
     startTime: booking.startTime || '09:00',
     endTime: booking.endTime || '17:00',
     // Transform items to match the expected format

@@ -48,6 +48,7 @@ interface Booking {
   endDate: string;
   startTime: string;
   endTime: string;
+  eventDate?: string;  // Optional event date
   totalAmount: number;
   advancePayment: number;
   status?: string;
@@ -106,6 +107,7 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
     endDate: booking?.endDate || new Date().toISOString().split('T')[0],
     startTime: booking?.startTime || '09:00',
     endTime: booking?.endTime || '17:00',
+    eventDate: booking?.eventDate || '',  // Optional event date
     totalAmount: booking?.totalAmount || 0,
     advancePayment: booking?.advancePayment || 0,
     notes: booking?.notes || '',
@@ -767,6 +769,24 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
                   className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
                 />
               </div>
+            </div>
+            
+            {/* Event Date Row */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Event Date <span className="text-gray-400 text-xs">(Optional)</span>
+              </label>
+              <input
+                type="date"
+                value={formData.eventDate}
+                onChange={(e) => setFormData(prev => ({ ...prev, eventDate: e.target.value }))}
+                disabled={isSubmitting}
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
+                placeholder="Select event date if applicable"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Specify when the actual event/function will take place (if different from rental period)
+              </p>
             </div>
           </div>
 

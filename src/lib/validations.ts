@@ -41,6 +41,7 @@ export const BookingSchema = z.object({
   endDate: z.date(),
   startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format").default("09:00"),
   endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format").default("17:00"),
+  eventDate: z.date().optional(),  // Optional event date
   totalAmount: z.number().min(0, "Total amount must be positive"),
   advancePayment: z.number().min(0, "Advance payment must be non-negative").default(0),
   notes: z.string().optional(),

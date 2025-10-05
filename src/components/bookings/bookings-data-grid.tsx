@@ -30,6 +30,7 @@ interface Booking {
   endDate: string;
   startTime: string;
   endTime: string;
+  eventDate?: string;  // Optional event date
   totalAmount: number;
   advancePayment?: number;
   status: BookingStatus;
@@ -98,6 +99,11 @@ export function BookingsDataGrid() {
         <div className="text-gray-600 dark:text-gray-400">
           {booking.startTime} - {booking.endTime}
         </div>
+        {booking.eventDate && (
+          <div className="text-blue-600 dark:text-blue-400 font-medium mt-1">
+            Event: {format(new Date(booking.eventDate), 'dd MMM, yyyy')}
+          </div>
+        )}
       </div>
 
       {/* Products */}
@@ -152,7 +158,7 @@ export function BookingsDataGrid() {
     {
       key: 'items',
       header: 'Products',
-      width: '30%',
+      width: '25%',
       render: (booking) => (
         <div className="space-y-2">
           <div className="font-medium text-gray-900 dark:text-gray-700 mb-1">
@@ -178,7 +184,7 @@ export function BookingsDataGrid() {
     {
       key: 'customer',
       header: 'Customer',
-      width: '18%',
+      width: '15%',
       render: (booking) => (
         <div className="space-y-2">
           <div>
@@ -207,9 +213,27 @@ export function BookingsDataGrid() {
       )
     },
     {
+      key: 'eventDate',
+      header: 'Event Date',
+      width: '12%',
+      render: (booking) => (
+        <div>
+          {booking.eventDate ? (
+            <div className="text-sm font-medium text-blue-600 dark:text-blue-400">
+              {format(new Date(booking.eventDate), 'dd MMM, yyyy')}
+            </div>
+          ) : (
+            <div className="text-xs text-gray-400 dark:text-gray-500">
+              Not set
+            </div>
+          )}
+        </div>
+      )
+    },
+    {
       key: 'totalAmount',
       header: 'Total Amount',
-      width: '12%',
+      width: '10%',
       render: (booking) => (
         <span className="font-medium text-green-600">
           ₹{booking.totalAmount.toFixed(2)}

@@ -47,6 +47,7 @@ model Booking {
   endDate     DateTime
   startTime   String        @default("09:00")
   endTime     String        @default("17:00")
+  eventDate   DateTime?     // Optional event date
   totalAmount Float
   advancePayment Float @default(0)
   notes       String?
