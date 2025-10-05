@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Edit2, X } from 'lucide-react';
 
 interface EditProductFormProps {
@@ -38,6 +38,17 @@ export function EditProductForm({ product, onProductUpdated }: EditProductFormPr
     status: product.status,
   });
   const [errors, setErrors] = useState<ProductFormErrors>({});
+
+  // Update form data when product prop changes
+  useEffect(() => {
+    setFormData({
+      name: product.name,
+      quantity: product.quantity,
+      rentPrice: product.rentPrice,
+      status: product.status,
+    });
+    setErrors({});
+  }, [product.id, product.name, product.quantity, product.rentPrice, product.status]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
