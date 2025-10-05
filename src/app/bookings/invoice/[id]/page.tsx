@@ -52,6 +52,7 @@ export default function InvoicePage() {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
 
   const bookingId = params.id;
@@ -84,11 +85,13 @@ export default function InvoicePage() {
   const handleSaveAsPDF = async () => {
     if (!invoiceRef.current || !booking) return;
 
+    let tempContainer: HTMLDivElement | null = null;
+    
     try {
       setIsGeneratingPDF(true);
       
       // Create a temporary container with fixed dimensions for consistent PDF output
-      const tempContainer = document.createElement('div');
+      tempContainer = document.createElement('div');
       tempContainer.style.position = 'absolute';
       tempContainer.style.left = '-9999px';
       tempContainer.style.top = '0';
@@ -106,6 +109,10 @@ export default function InvoicePage() {
       const storePhone = process.env.NEXT_PUBLIC_STORE_PHONE || 'Your Phone Number';
       const storeEmail = process.env.NEXT_PUBLIC_STORE_EMAIL || 'Your Email';
       const storeTagline = process.env.NEXT_PUBLIC_STORE_TAGLINE || 'Your Store Tagline';
+      
+      // Create customer-friendly filename
+      const customerName = (booking.customer?.name || 'Unknown').replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+      const fileName = `${customerName} - Invoice-${booking.id}.pdf`;
       
       const advancePayment = booking.advancePayment || 0;
       const totalAmount = booking.totalAmount || 0;
@@ -267,11 +274,16 @@ export default function InvoicePage() {
       
       pdf.addImage(imgData, 'PNG', xPos, yPos, finalWidth, finalHeight, undefined, 'FAST');
       
-      pdf.save(`${invoiceNumber}.pdf`);
+      // Simply save the PDF without auto-opening
+      pdf.save(fileName);
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Error generating PDF. Please try again.');
     } finally {
+      // Cleanup
+      if (tempContainer && tempContainer.parentNode) {
+        tempContainer.parentNode.removeChild(tempContainer);
+      }
       setIsGeneratingPDF(false);
     }
   };
@@ -279,11 +291,13 @@ export default function InvoicePage() {
   const handleShare = async () => {
     if (!invoiceRef.current || !booking) return;
 
+    let tempContainer: HTMLDivElement | null = null;
+    
     try {
-      setIsGeneratingPDF(true);
+      setIsSharing(true);
       
       // Create a temporary container with fixed dimensions for consistent PDF output
-      const tempContainer = document.createElement('div');
+      tempContainer = document.createElement('div');
       tempContainer.style.position = 'absolute';
       tempContainer.style.left = '-9999px';
       tempContainer.style.top = '0';
@@ -304,6 +318,10 @@ export default function InvoicePage() {
       const advancePayment = booking.advancePayment || 0;
       const totalAmount = booking.totalAmount || 0;
       const pendingAmount = totalAmount - advancePayment;
+      
+      // Create customer-friendly filename
+      const customerName = (booking.customer?.name || 'Unknown').replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+      const fileName = `${customerName} - Invoice-${booking.id}.pdf`;
       
       const statusClass = 
         booking.status === 'confirmed' ? 'background-color: #dcfce7; color: #166534;' :
@@ -462,34 +480,68 @@ export default function InvoicePage() {
       
       const pdfBlob = pdf.output('blob');
       
-      // Check if the Web Share API is available and supports files
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([pdfBlob], `${invoiceNumber}.pdf`, { type: 'application/pdf' })] })) {
-        const file = new File([pdfBlob], `${invoiceNumber}.pdf`, { type: 'application/pdf' });
-        
-        await navigator.share({
-          title: `Invoice ${invoiceNumber} - ${storeName}`,
-          text: `Invoice for ${booking.customer.name} - Total: ₹${booking.totalAmount.toLocaleString()}`,
-          files: [file]
-        });
-      } else {
-        // Fallback: Create download link and show share options
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(pdfBlob);
-        link.download = `${invoiceNumber}.pdf`;
-        
-        // Download the PDF
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        // Show instructions
-        alert('PDF downloaded! You can now share it via your preferred app (WhatsApp, Email, etc.)');
+      // Create a downloadable URL for the PDF
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      
+      // Check if running on mobile device
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      // Try Web Share API first (works on newer mobile browsers)
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([pdfBlob], fileName, { type: 'application/pdf' })] })) {
+        try {
+          const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+          
+          await navigator.share({
+            title: `Invoice ${invoiceNumber} - ${storeName}`,
+            text: `Invoice for ${booking.customer.name} - Total: ₹${booking.totalAmount.toLocaleString()}`,
+            files: [file]
+          });
+          return;
+        } catch (shareError) {
+          console.log('Web Share API failed, falling back to download and open');
+        }
       }
+      
+      // Fallback: Download and open PDF for manual sharing
+      const link = document.createElement('a');
+      link.href = pdfUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Auto-open the PDF after a short delay (to allow download to complete)
+      setTimeout(() => {
+        if (isMobile) {
+          // On mobile, try to open the PDF directly
+          try {
+            window.open(pdfUrl, '_blank');
+          } catch (error) {
+            console.log('Could not auto-open PDF on mobile');
+          }
+          
+          // Show helpful message for mobile users
+          alert('📱 PDF downloaded and opened!\n\n💡 Tip: You can now use your device\'s share button to send this invoice via WhatsApp, Email, Telegram, or any other app.');
+        } else {
+          // On desktop, open PDF in new tab
+          window.open(pdfUrl, '_blank');
+          alert('� PDF downloaded and opened in new tab!\n\n💡 Tip: You can now save or share this PDF from the new tab.');
+        }
+      }, 500); // Small delay to ensure download starts first
+      
+      // Cleanup URL after a delay
+      setTimeout(() => {
+        URL.revokeObjectURL(pdfUrl);
+      }, 10000);
     } catch (error) {
       console.error('Error sharing PDF:', error);
       alert('Error generating PDF for sharing. Please try again.');
     } finally {
-      setIsGeneratingPDF(false);
+      // Cleanup
+      if (tempContainer && tempContainer.parentNode) {
+        tempContainer.parentNode.removeChild(tempContainer);
+      }
+      setIsSharing(false);
     }
   };
 
@@ -568,10 +620,10 @@ export default function InvoicePage() {
             
             <button
               onClick={handleShare}
-              disabled={isGeneratingPDF}
+              disabled={isSharing}
               className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
             >
-              {isGeneratingPDF ? (
+              {isSharing ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Share2 className="w-4 h-4" />
