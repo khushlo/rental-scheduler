@@ -41,14 +41,14 @@ export const BookingSchema = z.object({
   endDate: z.date(),
   startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format").default("09:00"),
   endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format").default("17:00"),
-  eventDate: z.date().optional(),  // Optional event date
+  eventDate: z.date().optional().nullable(),  // Optional event date, can be null or undefined
   totalAmount: z.number().min(0, "Total amount must be positive"),
   advancePayment: z.number().min(0, "Advance payment must be non-negative").default(0),
   notes: z.string().optional(),
   customerId: CustomerIdSchema,
   items: z.array(BookingItemSchema).min(1, "At least one item is required"),
-}).refine((data) => data.endDate > data.startDate, {
-  message: "End date must be after start date",
+}).refine((data) => data.endDate >= data.startDate, {
+  message: "End date must be on or after start date",
   path: ["endDate"],
 }).refine((data) => {
   // If same date, ensure end time is after start time

@@ -90,7 +90,8 @@ export async function POST(request: NextRequest) {
     // Convert string dates to Date objects
     if (body.startDate) body.startDate = new Date(body.startDate)
     if (body.endDate) body.endDate = new Date(body.endDate)
-    if (body.eventDate) body.eventDate = new Date(body.eventDate)
+    if (body.eventDate && body.eventDate.trim()) body.eventDate = new Date(body.eventDate)
+    else if (body.eventDate === '') body.eventDate = null
     
     const validatedData = BookingSchema.parse(body)
     

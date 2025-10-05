@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Trash2, AlertTriangle, X } from 'lucide-react';
+import { Trash2, X } from 'lucide-react';
 
 interface Customer {
   id: number;
@@ -43,12 +43,8 @@ export function DeleteBookingButton({ booking, onBookingDeleted }: DeleteBooking
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [validationError, setValidationError] = useState<{
-    canDelete: boolean;
-    details: string;
-  } | null>(null);
 
-  const checkDeleteValidation = async () => {
+  const performDelete = async () => {
     try {
       const response = await fetch(`/api/bookings/${booking.id}`, {
         method: 'DELETE',
@@ -56,21 +52,14 @@ export function DeleteBookingButton({ booking, onBookingDeleted }: DeleteBooking
 
       const data = await response.json();
 
-      if (!response.ok && response.status === 409) {
-        // Conflict - booking is active or has other restrictions
-        setValidationError({
-          canDelete: false,
-          details: data.details || 'Booking cannot be deleted'
-        });
-        return false;
-      } else if (!response.ok) {
+      if (!response.ok) {
         throw new Error(data.error || 'Failed to delete booking');
       }
 
       return true;
     } catch (error: any) {
-      console.error('Error validating booking deletion:', error);
-      setError(error.message || 'Failed to validate booking deletion');
+      console.error('Error deleting booking:', error);
+      setError(error.message || 'Failed to delete booking');
       return false;
     }
   };
@@ -78,12 +67,11 @@ export function DeleteBookingButton({ booking, onBookingDeleted }: DeleteBooking
   const handleDelete = async () => {
     setIsSubmitting(true);
     setError(null);
-    setValidationError(null);
 
-    const canDelete = await checkDeleteValidation();
+    const deleteSuccess = await performDelete();
     
-    if (canDelete) {
-      // If we got here, the booking was successfully deleted
+    if (deleteSuccess) {
+      // Booking was successfully deleted
       setIsOpen(false);
       onBookingDeleted();
     }
@@ -94,14 +82,12 @@ export function DeleteBookingButton({ booking, onBookingDeleted }: DeleteBooking
   const handleOpen = () => {
     setIsOpen(true);
     setError(null);
-    setValidationError(null);
   };
 
   const handleClose = () => {
     if (!isSubmitting) {
       setIsOpen(false);
       setError(null);
-      setValidationError(null);
     }
   };
 
@@ -141,14 +127,10 @@ export function DeleteBookingButton({ booking, onBookingDeleted }: DeleteBooking
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
-                  {validationError && !validationError.canDelete ? (
-                    <AlertTriangle size={20} className="text-orange-600 dark:text-orange-400" />
-                  ) : (
-                    <Trash2 size={20} className="text-red-600 dark:text-red-400" />
-                  )}
+                  <Trash2 size={20} className="text-red-600 dark:text-red-400" />
                 </div>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                  {validationError && !validationError.canDelete ? 'Cannot Delete Booking' : 'Delete Booking'}
+                  Delete Booking
                 </h2>
               </div>
               <button
@@ -167,25 +149,11 @@ export function DeleteBookingButton({ booking, onBookingDeleted }: DeleteBooking
                 </div>
               )}
 
-              {validationError && !validationError.canDelete ? (
-                <div className="mb-4">
-                  <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 text-orange-700 dark:text-orange-300 px-4 py-3 rounded-lg mb-4">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" />
-                      <div>
-                        <div className="font-medium mb-1">Booking cannot be deleted</div>
-                        <div className="text-sm">{validationError.details}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="mb-4">
-                  <p className="text-gray-700 dark:text-gray-300 mb-4">
-                    Are you sure you want to delete this booking? This action cannot be undone.
-                  </p>
-                </div>
-              )}
+              <div className="mb-4">
+                <p className="text-gray-700 dark:text-gray-300 mb-4">
+                  Are you sure you want to delete this booking? This action cannot be undone.
+                </p>
+              </div>
 
               {/* Booking Details */}
               <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg mb-4">
@@ -257,19 +225,6 @@ export function DeleteBookingButton({ booking, onBookingDeleted }: DeleteBooking
                   </div>
                 )}
               </div>
-
-              {/* Warning for active bookings */}
-              {booking.status === 'ACTIVE' && (
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 text-yellow-700 dark:text-yellow-300 px-4 py-3 rounded-lg mb-4">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-medium">Warning</div>
-                      <div className="text-sm">This is an active booking. Deleting it may affect current rental operations.</div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="flex justify-end space-x-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
@@ -278,17 +233,15 @@ export function DeleteBookingButton({ booking, onBookingDeleted }: DeleteBooking
                 disabled={isSubmitting}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
               >
-                {validationError && !validationError.canDelete ? 'Close' : 'Cancel'}
+                Cancel
               </button>
-              {(!validationError || validationError.canDelete) && (
-                <button
-                  onClick={handleDelete}
-                  disabled={isSubmitting}
-                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? 'Deleting...' : 'Delete Booking'}
-                </button>
-              )}
+              <button
+                onClick={handleDelete}
+                disabled={isSubmitting}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? 'Deleting...' : 'Delete Booking'}
+              </button>
             </div>
           </div>
         </div>

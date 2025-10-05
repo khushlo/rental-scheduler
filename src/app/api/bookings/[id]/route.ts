@@ -20,7 +20,8 @@ export async function PUT(
     // Convert string dates to Date objects
     if (body.startDate) body.startDate = new Date(body.startDate)
     if (body.endDate) body.endDate = new Date(body.endDate)
-    if (body.eventDate) body.eventDate = new Date(body.eventDate)
+    if (body.eventDate && body.eventDate.trim()) body.eventDate = new Date(body.eventDate)
+    else if (body.eventDate === '') body.eventDate = null
     
     const validatedData = BookingSchema.omit({ id: true }).parse(body)
     
@@ -205,27 +206,17 @@ export async function DELETE(
       return NextResponse.json({ error: 'Valid booking ID is required' }, { status: 400 })
     }
     
-    // Check if booking is active (prevent deletion of active bookings)
+    // Find the booking to delete
     const booking = await prisma.booking.findUnique({
       where: { id },
-      select: { id: true, startDate: true, endDate: true }
+      select: { id: true }
     })
     
     if (!booking) {
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
     }
     
-    // Calculate current status
-    const status = calculateBookingStatus(booking.startDate, booking.endDate)
-    
-    if (status === 'active') {
-      return NextResponse.json({ 
-        error: 'Cannot delete active booking',
-        details: 'Active bookings cannot be deleted. Please complete or cancel the booking first.',
-        canDelete: false
-      }, { status: 409 })
-    }
-    
+    // Delete the booking (allow deletion regardless of status)
     await prisma.booking.delete({
       where: { id }
     })
