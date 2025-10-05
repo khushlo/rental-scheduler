@@ -62,7 +62,7 @@ export function ProductsDataGrid() {
         <div className="font-medium text-gray-900">{product.name}</div>
       ),
       mobileRender: (product) => (
-        <div className="font-medium text-gray-900">{product.name}</div>
+        <div className="font-medium text-gray-900 dark:text-gray-100">{product.name}</div>
       )
     },
     {
@@ -112,8 +112,11 @@ export function ProductsDataGrid() {
       width: '13%',
       render: (product) => (
         <div className="text-sm text-black">
-          {format(new Date(product.createdAt), 'MMM dd, yyyy')}
+          {format(new Date(product.createdAt), 'dd MMM, yyyy')}
         </div>
+      ),
+      mobileRender: (product) => (
+        <div className="font-medium text-gray-900 dark:text-gray-100">{format(new Date(product.createdAt), 'dd MMM, yyyy')}</div>
       )
     },
     {

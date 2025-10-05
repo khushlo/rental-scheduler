@@ -93,7 +93,7 @@ export function BookingsDataGrid() {
       {/* Rental Period */}
       <div className="text-sm">
         <div className="font-medium text-gray-900 dark:text-gray-100">
-          {format(new Date(booking.startDate), 'MMM dd, yyyy')} - {format(new Date(booking.endDate), 'MMM dd, yyyy')}
+          {format(new Date(booking.startDate), 'dd MMM, yyyy')} - {format(new Date(booking.endDate), 'dd MMM, yyyy')}
         </div>
         <div className="text-gray-600 dark:text-gray-400">
           {booking.startTime} - {booking.endTime}
@@ -195,13 +195,13 @@ export function BookingsDataGrid() {
       render: (booking) => (
         <div>
           <div className="text-sm font-medium text-gray-900 dark:text-gray-700">
-            {format(new Date(booking.startDate), 'MMM dd, yyyy')}
+            {format(new Date(booking.startDate), 'dd MMM, yyyy')}
           </div>
           <div className="text-xs text-gray-600 dark:text-gray-600">
             {booking.startTime} - {booking.endTime}
           </div>
           <div className="text-sm text-gray-900 dark:text-gray-700">
-            to {format(new Date(booking.endDate), 'MMM dd, yyyy')}
+            to {format(new Date(booking.endDate), 'dd MMM, yyyy')}
           </div>
         </div>
       )
