@@ -84,13 +84,15 @@ export function EditBookingForm({ booking, onBookingUpdated }: EditBookingFormPr
         Edit
       </button>
 
-      <BookingDialog
-        mode="edit"
-        booking={transformedBooking}
-        isOpen={isOpen}
-        onClose={handleClose}
-        onSuccess={onBookingUpdated}
-      />
+      {isOpen && (
+        <BookingDialog
+          mode="edit"
+          booking={transformedBooking}
+          isOpen={isOpen}
+          onClose={handleClose}
+          onSuccess={onBookingUpdated}
+        />
+      )}
     </>
   );
 }

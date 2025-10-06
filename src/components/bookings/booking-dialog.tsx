@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, X, UserPlus, MessageSquare, RefreshCw, Package } from 'lucide-react';
 
 interface Customer {
@@ -68,6 +68,7 @@ interface BookingDialogProps {
 
 export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: BookingDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [customerSearchTerm, setCustomerSearchTerm] = useState('');
@@ -80,6 +81,15 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
   const [expandedNotes, setExpandedNotes] = useState(new Set<number>());
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
+  
+  // Product search state for each item
+  const [productSearchTerms, setProductSearchTerms] = useState<{[itemIndex: number]: string}>({});
+  const [productSuggestions, setProductSuggestions] = useState<{[itemIndex: number]: Product[]}>({});
+  const [showProductDropdown, setShowProductDropdown] = useState<{[itemIndex: number]: boolean}>({});
+  
+  // Refs for product dropdowns
+  const productDropdownRefs = useRef<{[itemIndex: number]: HTMLDivElement | null}>({});
   
   // Customer form state
   const [customerFormData, setCustomerFormData] = useState({
@@ -115,28 +125,76 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
     items: booking?.items || []
   });
 
-  // Fetch products on component mount
+  // Fetch products only when dialog is open
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    if (isOpen) {
+      fetchProducts();
+    }
+  }, [isOpen]);
 
-  // Set selected customer if in edit mode
+  // Set selected customer if in edit mode and dialog is open
   useEffect(() => {
-    if (mode === 'edit' && booking?.customer) {
+    if (isOpen && mode === 'edit' && booking?.customer) {
       setSelectedCustomer(booking.customer);
       setCustomerSearchTerm(booking.customer.name);
     }
-  }, [mode, booking]);
+  }, [isOpen, mode, booking]);
 
-  // Validate items when component loads in edit mode
+  // Reset initialization flag when dialog closes
   useEffect(() => {
-    if (mode === 'edit' && formData.items.length > 0) {
-      // Delay validation slightly to ensure products are loaded
-      setTimeout(() => {
-        validateAllItems();
-      }, 1000);
+    if (!isOpen) {
+      setHasInitialized(false);
     }
-  }, [mode, products]);
+  }, [isOpen]);
+
+  // Initialize product search terms when products are loaded
+  useEffect(() => {
+    if (isOpen && mode === 'edit' && formData.items.length > 0 && products.length > 0 && !hasInitialized) {
+      // Initialize product search terms for existing items
+      const searchTerms: {[itemIndex: number]: string} = {};
+      
+      formData.items.forEach((item, index) => {
+        if (item.productId > 0) {
+          const product = products.find(p => p.id === item.productId);
+          if (product) {
+            searchTerms[index] = product.name;
+          }
+        }
+      });
+      setProductSearchTerms(searchTerms);
+      setHasInitialized(true);
+    }
+  }, [isOpen, mode, products, hasInitialized]);
+
+  // Validate items only once after initialization
+  useEffect(() => {
+    if (hasInitialized && isOpen && mode === 'edit' && formData.items.length > 0) {
+      const hasValidItems = formData.items.some(item => item.productId > 0);
+      if (hasValidItems) {
+        setTimeout(() => {
+          validateAllItems();
+        }, 1000);
+      }
+    }
+  }, [hasInitialized]);
+
+  // Click outside handler for product dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      Object.keys(productDropdownRefs.current).forEach(key => {
+        const itemIndex = parseInt(key);
+        const ref = productDropdownRefs.current[itemIndex];
+        if (ref && !ref.contains(event.target as Node) && showProductDropdown[itemIndex]) {
+          setShowProductDropdown(prev => ({ ...prev, [itemIndex]: false }));
+        }
+      });
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showProductDropdown]);
 
   const handleDateChange = (field: 'startDate' | 'endDate', value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -146,12 +204,16 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
       clearTimeout(validationTimeout);
     }
     
-    // Set new timeout for debounced validation
-    const newTimeout = setTimeout(() => {
-      validateAllItems();
-    }, 500);
-    
-    setValidationTimeout(newTimeout);
+    // Only validate if there are valid items to avoid unnecessary API calls
+    const hasValidItems = formData.items.some(item => item.productId > 0 && item.quantity > 0);
+    if (hasValidItems) {
+      // Set new timeout for debounced validation
+      const newTimeout = setTimeout(() => {
+        validateAllItems();
+      }, 500);
+      
+      setValidationTimeout(newTimeout);
+    }
   };
 
   const handleTimeChange = (field: 'startTime' | 'endTime', value: string) => {
@@ -162,16 +224,21 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
       clearTimeout(validationTimeout);
     }
     
-    // Set new timeout for debounced validation
-    const newTimeout = setTimeout(() => {
-      validateAllItems();
-    }, 500);
-    
-    setValidationTimeout(newTimeout);
+    // Only validate if there are valid items to avoid unnecessary API calls
+    const hasValidItems = formData.items.some(item => item.productId > 0 && item.quantity > 0);
+    if (hasValidItems) {
+      // Set new timeout for debounced validation
+      const newTimeout = setTimeout(() => {
+        validateAllItems();
+      }, 500);
+      
+      setValidationTimeout(newTimeout);
+    }
   };
 
   const fetchProducts = async () => {
     try {
+      setIsLoading(true);
       const response = await fetch('/api/products');
       if (response.ok) {
         const data = await response.json();
@@ -179,11 +246,15 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
       }
     } catch (error) {
       console.error('Error fetching products:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const checkItemAvailability = async (itemIndex: number, productId: number, quantity: number) => {
-    if (!productId || !quantity || !formData.startDate || !formData.endDate) {
+    // Only check availability for valid productId (> 0), quantity (> 0), and dates
+    if (!productId || productId <= 0 || !quantity || quantity <= 0 || !formData.startDate || !formData.endDate) {
+      // Clear any existing availability error for this item
       setItemAvailability(prev => ({ ...prev, [itemIndex]: null }));
       return;
     }
@@ -240,8 +311,9 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
   };
 
   const validateAllItems = () => {
+    // Only validate items with valid productId (> 0) and quantity (> 0)
     formData.items.forEach((item, index) => {
-      if (item.productId && item.quantity) {
+      if (item.productId > 0 && item.quantity > 0) {
         checkItemAvailability(index, item.productId, item.quantity);
       }
     });
@@ -309,6 +381,40 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
 
   const hasNoteContent = (index: number): boolean => {
     return !!(formData.items[index]?.notes && formData.items[index].notes!.trim() !== '');
+  };
+
+  const searchProducts = (searchTerm: string, itemIndex: number) => {
+    if (searchTerm.length < 1) {
+      setProductSuggestions(prev => ({ ...prev, [itemIndex]: [] }));
+      setShowProductDropdown(prev => ({ ...prev, [itemIndex]: false }));
+      return;
+    }
+
+    const filtered = products.filter(product => 
+      product.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setProductSuggestions(prev => ({ ...prev, [itemIndex]: filtered }));
+    setShowProductDropdown(prev => ({ ...prev, [itemIndex]: true }));
+  };
+
+  const selectProduct = (product: Product, itemIndex: number) => {
+    setProductSearchTerms(prev => ({ ...prev, [itemIndex]: product.name }));
+    setShowProductDropdown(prev => ({ ...prev, [itemIndex]: false }));
+    updateBookingItem(itemIndex, 'productId', product.id);
+  };
+
+  const clearProductSelection = (itemIndex: number) => {
+    setProductSearchTerms(prev => ({ ...prev, [itemIndex]: '' }));
+    setShowProductDropdown(prev => ({ ...prev, [itemIndex]: false }));
+    updateBookingItem(itemIndex, 'productId', 0);
+  };
+
+  const handleProductSearch = (value: string, itemIndex: number) => {
+    setProductSearchTerms(prev => ({ ...prev, [itemIndex]: value }));
+    if (formData.items[itemIndex]?.productId) {
+      updateBookingItem(itemIndex, 'productId', 0);
+    }
+    searchProducts(value, itemIndex);
   };
 
   const handleProductAdded = () => {
@@ -464,6 +570,46 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
       });
       return newAvailability;
     });
+
+    // Clean up product search states
+    setProductSearchTerms(prev => {
+      const newTerms: {[itemIndex: number]: string} = {};
+      Object.keys(prev).forEach(key => {
+        const idx = parseInt(key);
+        if (idx < index) {
+          newTerms[idx] = prev[idx];
+        } else if (idx > index) {
+          newTerms[idx - 1] = prev[idx];
+        }
+      });
+      return newTerms;
+    });
+
+    setProductSuggestions(prev => {
+      const newSuggestions: {[itemIndex: number]: Product[]} = {};
+      Object.keys(prev).forEach(key => {
+        const idx = parseInt(key);
+        if (idx < index) {
+          newSuggestions[idx] = prev[idx];
+        } else if (idx > index) {
+          newSuggestions[idx - 1] = prev[idx];
+        }
+      });
+      return newSuggestions;
+    });
+
+    setShowProductDropdown(prev => {
+      const newDropdown: {[itemIndex: number]: boolean} = {};
+      Object.keys(prev).forEach(key => {
+        const idx = parseInt(key);
+        if (idx < index) {
+          newDropdown[idx] = prev[idx];
+        } else if (idx > index) {
+          newDropdown[idx - 1] = prev[idx];
+        }
+      });
+      return newDropdown;
+    });
   };
 
   const updateBookingItem = (index: number, field: string, value: any) => {
@@ -493,20 +639,26 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
       return { ...prev, items: newItems };
     });
 
-    // Check availability when productId or quantity changes
+    // Check availability when productId or quantity changes (only for valid values)
     if (field === 'productId' || field === 'quantity') {
       const item = formData.items[index];
       const newProductId = field === 'productId' ? value : item.productId;
       const newQuantity = field === 'quantity' ? value : item.quantity;
       
-      if (newProductId && newQuantity) {
+      // Only check availability for valid productId (> 0) and quantity (> 0)
+      if (newProductId > 0 && newQuantity > 0) {
         checkItemAvailability(index, newProductId, newQuantity);
+      } else {
+        // Clear availability error if productId or quantity becomes invalid
+        setItemAvailability(prev => ({ ...prev, [index]: null }));
       }
     }
   };
 
   const calculateTotal = () => {
-    return formData.items.reduce((total, item) => total + item.subtotal, 0);
+    return (formData.totalAmount === undefined || formData.totalAmount === 0) 
+      ? formData.items.reduce((total, item) => total + item.subtotal, 0) 
+      : formData.totalAmount;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -609,7 +761,7 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
           <div className="flex items-center gap-4">
             <button
               onClick={onClose}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isLoading}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50"
             >
               <X size={24} />
@@ -617,7 +769,18 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+        {isLoading ? (
+          <div className="p-8 flex flex-col items-center justify-center min-h-[400px]">
+            <div className="relative">
+              <div className="w-12 h-12 border-4 border-blue-200 dark:border-blue-800 rounded-full animate-spin"></div>
+              <div className="absolute top-0 left-0 w-12 h-12 border-4 border-transparent border-t-blue-600 dark:border-t-blue-400 rounded-full animate-spin"></div>
+            </div>
+            <p className="mt-4 text-gray-600 dark:text-gray-400 text-sm">
+              Loading booking details...
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-100px)]">
           {error && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm">
               {error}
@@ -818,19 +981,51 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
                         Product <span className="text-red-500">*</span>
                       </label>
                       <div className="flex items-center gap-2">
-                        <select
-                          value={item.productId}
-                          onChange={(e) => updateBookingItem(index, 'productId', parseInt(e.target.value))}
-                          disabled={isSubmitting}
-                          className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
+                        <div 
+                          className="flex-1 relative"
+                          ref={(el) => { productDropdownRefs.current[index] = el; }}
                         >
-                          <option value={0}>Select a product</option>
-                          {products.map((product) => (
-                            <option key={product.id} value={product.id}>
-                              {product.name} (₹{product.rentPrice}/day) - Stock: {product.quantity}
-                            </option>
-                          ))}
-                        </select>
+                          <input
+                            type="text"
+                            value={productSearchTerms[index] || ''}
+                            onChange={(e) => handleProductSearch(e.target.value, index)}
+                            placeholder="Search for a product..."
+                            disabled={isSubmitting}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
+                          />
+                          
+                          {/* Product Search Results Dropdown */}
+                          {showProductDropdown[index] && productSuggestions[index] && productSuggestions[index].length > 0 && (
+                            <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                              {productSuggestions[index].map((product) => (
+                                <button
+                                  key={product.id}
+                                  type="button"
+                                  onClick={() => selectProduct(product, index)}
+                                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-600 focus:bg-gray-100 dark:focus:bg-gray-600 focus:outline-none first:rounded-t-lg last:rounded-b-lg"
+                                >
+                                  <div className="font-medium text-gray-900 dark:text-gray-100">
+                                    {product.name}
+                                  </div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    ₹{product.rentPrice}/day • Stock: {product.quantity}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Clear Product Selection Button */}
+                          {(item.productId > 0 || (productSearchTerms[index] && productSearchTerms[index].length > 0)) && (
+                            <button
+                              type="button"
+                              onClick={() => clearProductSelection(index)}
+                              className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                            >
+                              <X size={14} />
+                            </button>
+                          )}
+                        </div>
                         <button
                           type="button"
                           onClick={() => setShowAddProduct(true)}
@@ -1140,6 +1335,7 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
             </button>
           </div>
         </form>
+        )}
       </div>
 
       {/* Add Product Dialog */}

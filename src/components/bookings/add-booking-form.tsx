@@ -25,12 +25,14 @@ export function AddBookingForm({ onBookingAdded }: AddBookingFormProps) {
         New Booking
       </button>
 
-      <BookingDialog
-        mode="add"
-        isOpen={isOpen}
-        onClose={handleClose}
-        onSuccess={onBookingAdded}
-      />
+      {isOpen && (
+        <BookingDialog
+          mode="add"
+          isOpen={isOpen}
+          onClose={handleClose}
+          onSuccess={onBookingAdded}
+        />
+      )}
     </>
   );
 }
