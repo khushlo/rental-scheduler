@@ -52,12 +52,59 @@ interface Booking {
 
 export function BookingsDataGrid() {
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   // Function to navigate to invoice page
   const handleGenerateInvoice = (booking: Booking) => {
     router.push(`/bookings/invoice/${booking.id}`);
+  };
+
+  // Custom search function for bookings
+  const searchBookings = (bookings: Booking[], searchTerm: string): Booking[] => {
+    if (!searchTerm.trim()) return bookings;
+    
+    const searchLower = searchTerm.toLowerCase();
+    
+    return bookings.filter(booking => {
+      // Search in booking ID (formatted)
+      if (formatId(booking.id).toLowerCase().includes(searchLower)) return true;
+      
+      // Search in customer data
+      if (booking.customer.name.toLowerCase().includes(searchLower)) return true;
+      if (booking.customer.phone1.toLowerCase().includes(searchLower)) return true;
+      if (booking.customer.phone2?.toLowerCase().includes(searchLower)) return true;
+      if (booking.customer.email.toLowerCase().includes(searchLower)) return true;
+      if (booking.customer.address?.toLowerCase().includes(searchLower)) return true;
+      
+      // Search in product names and categories
+      if (booking.items.some(item => 
+        item.product.name.toLowerCase().includes(searchLower) ||
+        item.product.category?.toLowerCase().includes(searchLower)
+      )) return true;
+      
+      // Search in status
+      if (booking.status.toLowerCase().includes(searchLower)) return true;
+      
+      // Search in notes
+      if (booking.notes?.toLowerCase().includes(searchLower)) return true;
+      
+      // Search in dates (formatted)
+      if (format(new Date(booking.startDate), 'dd MMM, yyyy').toLowerCase().includes(searchLower)) return true;
+      if (format(new Date(booking.endDate), 'dd MMM, yyyy').toLowerCase().includes(searchLower)) return true;
+      if (booking.eventDate && format(new Date(booking.eventDate), 'dd MMM, yyyy').toLowerCase().includes(searchLower)) return true;
+      
+      // Search in times
+      if (booking.startTime.includes(searchLower)) return true;
+      if (booking.endTime.includes(searchLower)) return true;
+      
+      // Search in amounts (as string)
+      if (booking.totalAmount.toString().includes(searchLower)) return true;
+      if (booking.advancePayment?.toString().includes(searchLower)) return true;
+      
+      return false;
+    });
   };
 
   useEffect(() => {
@@ -71,12 +118,19 @@ export function BookingsDataGrid() {
       if (response.ok) {
         const data = await response.json();
         setBookings(data);
+        setFilteredBookings(data);
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle search
+  const handleSearch = (searchTerm: string) => {
+    const filtered = searchBookings(bookings, searchTerm);
+    setFilteredBookings(filtered);
   };
 
   // Custom mobile card renderer for bookings
@@ -301,10 +355,11 @@ export function BookingsDataGrid() {
       </div>
 
       <DataGrid
-        data={bookings}
+        data={filteredBookings}
         columns={columns}
         pageSize={50}
-        searchPlaceholder="Search by Booking ID, Customer ID, Product ID, names, or status..."
+        searchPlaceholder="Search by Booking ID, Customer Name, Product names, Status, or any details..."
+        onSearch={handleSearch}
         loading={loading}
         emptyMessage="No bookings found. Create your first booking to get started."
         renderCard={renderBookingCard}
