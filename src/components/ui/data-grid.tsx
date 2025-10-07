@@ -54,12 +54,12 @@ export function DataGrid<T extends Record<string, any>>({
   }, []);
 
   // Filter data based on search term
-  const filteredData = searchTerm ? data.filter(item => {
+  const filteredData = onSearch ? data : (searchTerm ? data.filter(item => {
     const searchLower = searchTerm.toLowerCase();
     return Object.values(item).some(value => 
       String(value).toLowerCase().includes(searchLower)
     );
-  }) : data;
+  }) : data);
 
   const totalPages = Math.ceil(filteredData.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;

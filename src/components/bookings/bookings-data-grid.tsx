@@ -66,17 +66,38 @@ export function BookingsDataGrid() {
     if (!searchTerm.trim()) return bookings;
     
     const searchLower = searchTerm.toLowerCase();
+    console.log('Searching for:', searchLower);
     
     return bookings.filter(booking => {
+      console.log('Checking booking:', booking.id, 'Customer:', booking.customer?.name);
+      
       // Search in booking ID (formatted)
-      if (formatId(booking.id).toLowerCase().includes(searchLower)) return true;
+      if (formatId(booking.id).toLowerCase().includes(searchLower)) {
+        console.log('Found match in booking ID');
+        return true;
+      }
       
       // Search in customer data
-      if (booking.customer.name.toLowerCase().includes(searchLower)) return true;
-      if (booking.customer.phone1.toLowerCase().includes(searchLower)) return true;
-      if (booking.customer.phone2?.toLowerCase().includes(searchLower)) return true;
-      if (booking.customer.email.toLowerCase().includes(searchLower)) return true;
-      if (booking.customer.address?.toLowerCase().includes(searchLower)) return true;
+      if (booking.customer?.name?.toLowerCase().includes(searchLower)) {
+        console.log('Found match in customer name');
+        return true;
+      }
+      if (booking.customer?.phone1?.toLowerCase().includes(searchLower)) {
+        console.log('Found match in customer phone1');
+        return true;
+      }
+      if (booking.customer?.phone2?.toLowerCase().includes(searchLower)) {
+        console.log('Found match in customer phone2');
+        return true;
+      }
+      if (booking.customer?.email?.toLowerCase().includes(searchLower)) {
+        console.log('Found match in customer email');
+        return true;
+      }
+      if (booking.customer?.address?.toLowerCase().includes(searchLower)) {
+        console.log('Found match in customer address');
+        return true;
+      }
       
       // Search in product names and categories
       if (booking.items.some(item => 
