@@ -70,6 +70,12 @@ model BookingItem {
   pricePerDay Float
   subtotal  Float
   notes     String?
+  
+  // Individual item timing (optional - if null, uses booking's timing)
+  itemStartDate   DateTime?
+  itemEndDate     DateTime?
+  itemStartTime   String?
+  itemEndTime     String?
 
   // Foreign Keys
   bookingId Int

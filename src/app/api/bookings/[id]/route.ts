@@ -131,10 +131,17 @@ export async function PUT(
     
     // Use subtotals from the request (preserving manual edits from UI)
     const itemsWithSubtotal = validatedData.items.map(item => ({
-      ...item,
-      // Use the subtotal from UI if provided, otherwise calculate it
-      subtotal: item.subtotal !== undefined ? item.subtotal : 
-                item.quantity * item.pricePerDay * Math.ceil((validatedData.endDate.getTime() - validatedData.startDate.getTime()) / (1000 * 60 * 60 * 24))
+      productId: item.productId,
+      quantity: item.quantity,
+      pricePerDay: item.pricePerDay,
+      notes: item.notes,
+      // Use the subtotal from UI if provided, otherwise calculate as quantity * pricePerDay (one-time rental)
+      subtotal: item.subtotal !== undefined ? item.subtotal : item.quantity * item.pricePerDay,
+      // Include individual timing fields (convert dates to Date objects if provided)
+      itemStartDate: item.itemStartDate ? new Date(item.itemStartDate) : null,
+      itemEndDate: item.itemEndDate ? new Date(item.itemEndDate) : null,
+      itemStartTime: item.itemStartTime || null,
+      itemEndTime: item.itemEndTime || null,
     }))
     
     console.log('Updating booking with items:', JSON.stringify(itemsWithSubtotal, null, 2)); // Debug log

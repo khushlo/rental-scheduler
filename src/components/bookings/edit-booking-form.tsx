@@ -19,6 +19,10 @@ interface BookingItem {
   subtotal: number;
   notes?: string;
   productId: number;
+  itemStartDate?: string | null;
+  itemEndDate?: string | null;
+  itemStartTime?: string | null;
+  itemEndTime?: string | null;
   product: {
     id: number;
     name: string;
@@ -69,7 +73,12 @@ export function EditBookingForm({ booking, onBookingUpdated }: EditBookingFormPr
       quantity: item.quantity,
       pricePerDay: item.pricePerDay,
       subtotal: item.subtotal,
-      notes: item.notes || ''
+      notes: item.notes || '',
+      itemStartDate: item.itemStartDate ? item.itemStartDate.split('T')[0] : undefined,
+      itemEndDate: item.itemEndDate ? item.itemEndDate.split('T')[0] : undefined,
+      itemStartTime: item.itemStartTime || undefined,
+      itemEndTime: item.itemEndTime || undefined,
+      hasCustomTiming: !!(item.itemStartDate && item.itemEndDate && item.itemStartTime && item.itemEndTime)
     }))
   };
 

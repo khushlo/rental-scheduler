@@ -33,6 +33,12 @@ export const BookingItemSchema = z.object({
   pricePerDay: z.number().min(0, "Price must be positive"),
   subtotal: z.number().min(0, "Subtotal must be positive").optional(),
   notes: z.string().optional(),
+  // Individual item timing (optional - if null, uses booking's timing)
+  itemStartDate: z.string().optional(),
+  itemEndDate: z.string().optional(),
+  itemStartTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format").optional(),
+  itemEndTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format").optional(),
+  hasCustomTiming: z.boolean().optional(), // UI state (not saved to DB)
 })
 
 export const BookingSchema = z.object({

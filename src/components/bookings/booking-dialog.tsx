@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Plus, X, UserPlus, MessageSquare, RefreshCw, Package } from 'lucide-react';
+import { Plus, X, UserPlus, MessageSquare, RefreshCw, Package, Clock } from 'lucide-react';
 
 interface Customer {
   id: number;
@@ -25,6 +25,12 @@ interface BookingItem {
   pricePerDay: number;
   subtotal: number;
   notes?: string;
+  // Individual item timing (optional - if null, uses booking's timing)
+  itemStartDate?: string;
+  itemEndDate?: string;
+  itemStartTime?: string;
+  itemEndTime?: string;
+  hasCustomTiming?: boolean; // UI state to track if custom timing is enabled
 }
 
 interface AvailabilityError {
@@ -534,6 +540,32 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
     });
   };
 
+  const toggleCustomTiming = (index: number) => {
+    setFormData(prev => {
+      const newItems = [...prev.items];
+      const currentItem = { ...newItems[index] };
+      
+      if (currentItem.hasCustomTiming) {
+        // Disable custom timing - clear individual timing fields
+        currentItem.hasCustomTiming = false;
+        currentItem.itemStartDate = undefined;
+        currentItem.itemEndDate = undefined;
+        currentItem.itemStartTime = undefined;
+        currentItem.itemEndTime = undefined;
+      } else {
+        // Enable custom timing - initialize with booking's timing
+        currentItem.hasCustomTiming = true;
+        currentItem.itemStartDate = prev.startDate;
+        currentItem.itemEndDate = prev.endDate;
+        currentItem.itemStartTime = prev.startTime;
+        currentItem.itemEndTime = prev.endTime;
+      }
+      
+      newItems[index] = currentItem;
+      return { ...prev, items: newItems };
+    });
+  };
+
   const addBookingItem = () => {
     const newIndex = formData.items.length;
     setFormData(prev => ({
@@ -617,11 +649,9 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
       const newItems = [...prev.items];
       newItems[index] = { ...newItems[index], [field]: value };
 
-      // Auto-calculate subtotal when quantity or pricePerDay changes
+      // Auto-calculate subtotal when quantity or pricePerDay changes (one-time rental fee)
       if (field === 'quantity' || field === 'pricePerDay') {
-        // const days = Math.ceil((new Date(prev.endDate).getTime() - new Date(prev.startDate).getTime()) / (1000 * 60 * 60 * 24)) || 1;
-        const days = 1; // Hardcoded to 1 day for time-aware bookings
-        const autoCalculatedSubtotal = newItems[index].quantity * newItems[index].pricePerDay * days;
+        const autoCalculatedSubtotal = newItems[index].quantity * newItems[index].pricePerDay;
         newItems[index].subtotal = autoCalculatedSubtotal;
       }
 
@@ -630,9 +660,7 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
         const selectedProduct = products.find(p => p.id === value);
         if (selectedProduct) {
           newItems[index].pricePerDay = selectedProduct.rentPrice;
-          // const days = Math.ceil((new Date(prev.endDate).getTime() - new Date(prev.startDate).getTime()) / (1000 * 60 * 60 * 24)) || 1;
-          const days = 1; // Hardcoded to 1 day for time-aware bookings
-          newItems[index].subtotal = newItems[index].quantity * selectedProduct.rentPrice * days;
+          newItems[index].subtotal = newItems[index].quantity * selectedProduct.rentPrice;
         }
       }
 
@@ -961,7 +989,7 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
                 type="button"
                 onClick={refreshAvailability}
                 disabled={isSubmitting || isRefreshing}
-                className="inline-flex items-center p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center p-2 text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
                 title="Refresh availability"
               >
                 <RefreshCw 
@@ -1214,6 +1242,84 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
                               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50 resize-none"
                               rows={3}
                             />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Custom Timing Button and Fields */}
+                    {item.productId > 0 && (
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => toggleCustomTiming(index)}
+                          className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                            item.hasCustomTiming
+                              ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600 text-blue-700 dark:text-blue-300'
+                              : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
+                          }`}
+                          disabled={isSubmitting}
+                        >
+                          <Clock size={16} />
+                          {item.hasCustomTiming ? 'Remove Custom Timing' : 'Set Custom Timing'}
+                        </button>
+                        
+                        {/* Custom Timing Fields */}
+                        {item.hasCustomTiming && (
+                          <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
+                            <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-3">
+                              Custom Timing for This Item
+                            </h4>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
+                                  Start Date
+                                </label>
+                                <input
+                                  type="date"
+                                  value={item.itemStartDate || ''}
+                                  onChange={(e) => updateBookingItem(index, 'itemStartDate', e.target.value)}
+                                  disabled={isSubmitting}
+                                  className="w-full px-2 py-1 text-xs border border-blue-300 dark:border-blue-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent dark:bg-blue-900/30 dark:text-blue-100"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
+                                  Start Time
+                                </label>
+                                <input
+                                  type="time"
+                                  value={item.itemStartTime || ''}
+                                  onChange={(e) => updateBookingItem(index, 'itemStartTime', e.target.value)}
+                                  disabled={isSubmitting}
+                                  className="w-full px-2 py-1 text-xs border border-blue-300 dark:border-blue-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent dark:bg-blue-900/30 dark:text-blue-100"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
+                                  End Date
+                                </label>
+                                <input
+                                  type="date"
+                                  value={item.itemEndDate || ''}
+                                  onChange={(e) => updateBookingItem(index, 'itemEndDate', e.target.value)}
+                                  disabled={isSubmitting}
+                                  className="w-full px-2 py-1 text-xs border border-blue-300 dark:border-blue-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent dark:bg-blue-900/30 dark:text-blue-100"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
+                                  End Time
+                                </label>
+                                <input
+                                  type="time"
+                                  value={item.itemEndTime || ''}
+                                  onChange={(e) => updateBookingItem(index, 'itemEndTime', e.target.value)}
+                                  disabled={isSubmitting}
+                                  className="w-full px-2 py-1 text-xs border border-blue-300 dark:border-blue-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent dark:bg-blue-900/30 dark:text-blue-100"
+                                />
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>

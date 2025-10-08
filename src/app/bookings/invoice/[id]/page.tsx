@@ -82,6 +82,29 @@ export default function InvoicePage() {
     }
   };
 
+  // Helper function to format time to 12-hour format with AM/PM
+  const formatTimeTo12Hour = (time24: string): string => {
+    if (!time24) return 'N/A';
+    
+    try {
+      const [hours, minutes] = time24.split(':');
+      const hour24 = parseInt(hours, 10);
+      const minute = minutes || '00';
+      
+      if (hour24 === 0) {
+        return `12:${minute} AM`;
+      } else if (hour24 === 12) {
+        return `12:${minute} PM`;
+      } else if (hour24 < 12) {
+        return `${hour24}:${minute} AM`;
+      } else {
+        return `${hour24 - 12}:${minute} PM`;
+      }
+    } catch (error) {
+      return time24; // Return original if parsing fails
+    }
+  };
+
   const handleSaveAsPDF = async () => {
     if (!invoiceRef.current || !booking) return;
 
@@ -166,7 +189,7 @@ export default function InvoicePage() {
             <div style="margin-bottom: 12px;">
               <span style="font-weight: 600; color: #374151; font-size: 14px;">Rental Period:</span>
               <span style="color: #6b7280; margin-left: 8px; font-size: 14px;">
-                From ${booking.startDate ? new Date(booking.startDate).toLocaleDateString('en-IN') : 'N/A'} to ${booking.endDate ? new Date(booking.endDate).toLocaleDateString('en-IN') : 'N/A'}
+                From ${booking.startDate ? new Date(booking.startDate).toLocaleDateString('en-IN') : 'N/A'} at ${formatTimeTo12Hour(booking.startTime)} to ${booking.endDate ? new Date(booking.endDate).toLocaleDateString('en-IN') : 'N/A'} at ${formatTimeTo12Hour(booking.endTime)}
               </span>
             </div>
             <div style="display: flex; gap: 32px;">
@@ -370,7 +393,7 @@ export default function InvoicePage() {
             <div style="margin-bottom: 12px;">
               <span style="font-weight: 600; color: #374151; font-size: 14px;">Rental Period:</span>
               <span style="color: #6b7280; margin-left: 8px; font-size: 14px;">
-                From ${booking.startDate ? new Date(booking.startDate).toLocaleDateString('en-IN') : 'N/A'} to ${booking.endDate ? new Date(booking.endDate).toLocaleDateString('en-IN') : 'N/A'}
+                From ${booking.startDate ? new Date(booking.startDate).toLocaleDateString('en-IN') : 'N/A'} at ${formatTimeTo12Hour(booking.startTime)} to ${booking.endDate ? new Date(booking.endDate).toLocaleDateString('en-IN') : 'N/A'} at ${formatTimeTo12Hour(booking.endTime)}
               </span>
             </div>
             <div style="display: flex; gap: 32px;">
@@ -673,7 +696,7 @@ export default function InvoicePage() {
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
                   <span className="font-medium text-gray-700 text-sm sm:text-base min-w-[120px]">Rental Period:</span>
                   <span className="text-gray-600 text-sm sm:text-base">
-                    From {booking.startDate ? new Date(booking.startDate).toLocaleDateString('en-IN') : 'N/A'} to {booking.endDate ? new Date(booking.endDate).toLocaleDateString('en-IN') : 'N/A'}
+                    From {booking.startDate ? new Date(booking.startDate).toLocaleDateString('en-IN') : 'N/A'} at {formatTimeTo12Hour(booking.startTime)} to {booking.endDate ? new Date(booking.endDate).toLocaleDateString('en-IN') : 'N/A'} at {formatTimeTo12Hour(booking.endTime)}
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
@@ -712,9 +735,9 @@ export default function InvoicePage() {
                         <td className="px-3 sm:px-6 py-3 sm:py-4">
                           <div className="font-medium text-gray-800 text-xs sm:text-sm">{item.product?.name || 'Unknown Product'}</div>
                         </td>
-                        <td className="px-3 sm:px-6 py-3 sm:py-4 text-center text-xs sm:text-sm">{item.quantity || 0}</td>
-                        <td className="px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm">₹{(item.product?.pricePerDay || 0).toLocaleString()}</td>
-                        <td className="px-3 sm:px-6 py-3 sm:py-4 text-right font-medium text-xs sm:text-sm">₹{(item.subtotal || 0).toLocaleString()}</td>
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 text-gray-800 text-center text-xs sm:text-sm">{item.quantity || 0}</td>
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 text-gray-800 text-right text-xs sm:text-sm">₹{(item.product?.pricePerDay || 0).toLocaleString()}</td>
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 text-gray-800 text-right font-medium text-xs sm:text-sm">₹{(item.subtotal || 0).toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>

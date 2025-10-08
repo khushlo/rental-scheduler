@@ -83,8 +83,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check overlapping bookings (exclude completed and cancelled bookings)
-    // For time-aware checking, we need to get all potentially overlapping bookings
-    // and then filter them based on actual time overlaps
+    // Enhanced to check individual item timing when available
     const potentiallyOverlappingBookings = await prisma.booking.findMany({
       where: {
         // Exclude the current booking if editing
@@ -124,25 +123,52 @@ export async function GET(request: NextRequest) {
       orderBy: { startDate: 'asc' }
     })
 
-    // Filter for actual time-based overlaps if times are provided
+    // Filter for actual time-based overlaps considering individual item timing
     const overlappingBookings = potentiallyOverlappingBookings.filter(booking => {
-      // If no times provided for the request, use date-only logic (backward compatibility)
-      if (!startTime || !endTime) {
-        return true // Keep all date-overlapping bookings
-      }
+      // Check if any item in this booking conflicts with the requested time
+      return booking.items.some((item: any) => {
+        // Determine effective timing for this item
+        let itemStartDateTime: Date;
+        let itemEndDateTime: Date;
 
-      // Create DateTime objects for existing booking
-      const bookingStart = new Date(booking.startDate)
-      const [bookingStartHours, bookingStartMinutes] = booking.startTime.split(':').map(Number)
-      bookingStart.setHours(bookingStartHours, bookingStartMinutes, 0, 0)
+        // Check if item has individual timing (all timing fields must be present)
+        if (item.itemStartDate && item.itemEndDate && item.itemStartTime && item.itemEndTime) {
+          // Use individual item timing
+          const itemStartDate = new Date(item.itemStartDate);
+          const [itemStartHours, itemStartMinutes] = item.itemStartTime.split(':').map(Number);
+          itemStartDateTime = new Date(itemStartDate);
+          itemStartDateTime.setHours(itemStartHours, itemStartMinutes, 0, 0);
 
-      const bookingEnd = new Date(booking.endDate)
-      const [bookingEndHours, bookingEndMinutes] = booking.endTime.split(':').map(Number)
-      bookingEnd.setHours(bookingEndHours, bookingEndMinutes, 0, 0)
+          const itemEndDate = new Date(item.itemEndDate);
+          const [itemEndHours, itemEndMinutes] = item.itemEndTime.split(':').map(Number);
+          itemEndDateTime = new Date(itemEndDate);
+          itemEndDateTime.setHours(itemEndHours, itemEndMinutes, 0, 0);
+        } else {
+          // Use booking's general timing
+          const bookingStart = new Date(booking.startDate);
+          const [bookingStartHours, bookingStartMinutes] = booking.startTime.split(':').map(Number);
+          itemStartDateTime = new Date(bookingStart);
+          itemStartDateTime.setHours(bookingStartHours, bookingStartMinutes, 0, 0);
 
-      // Check for time overlap using DateTime comparison
-      // Two time periods overlap if: start1 < end2 AND start2 < end1
-      return requestStartDateTime < bookingEnd && bookingStart < requestEndDateTime
+          const bookingEnd = new Date(booking.endDate);
+          const [bookingEndHours, bookingEndMinutes] = booking.endTime.split(':').map(Number);
+          itemEndDateTime = new Date(bookingEnd);
+          itemEndDateTime.setHours(bookingEndHours, bookingEndMinutes, 0, 0);
+        }
+
+        // If no times provided for the request, use date-only logic (backward compatibility)
+        if (!startTime || !endTime) {
+          const requestStart = new Date(startDate);
+          const requestEnd = new Date(endDate);
+          const itemStart = new Date(item.itemStartDate || booking.startDate);
+          const itemEnd = new Date(item.itemEndDate || booking.endDate);
+          return requestStart <= itemEnd && itemStart <= requestEnd;
+        }
+
+        // Check for time overlap using DateTime comparison
+        // Two time periods overlap if: start1 < end2 AND start2 < end1
+        return requestStartDateTime < itemEndDateTime && itemStartDateTime < requestEndDateTime;
+      });
     })
 
     // Calculate booked quantity from non-completed/non-cancelled bookings
@@ -150,7 +176,7 @@ export async function GET(request: NextRequest) {
       const status = calculateBookingStatus(booking.startDate, booking.endDate)
       // Only count bookings that are confirmed or active
       if (status === 'confirmed' || status === 'active') {
-        return total + booking.items.reduce((itemTotal: number, bookingItem: any) => {
+        return total + (booking.items as any[]).reduce((itemTotal: number, bookingItem: any) => {
           return itemTotal + bookingItem.quantity
         }, 0)
       }
@@ -187,9 +213,9 @@ export async function GET(request: NextRequest) {
           endDate: booking.endDate,
           startTime: booking.startTime,
           endTime: booking.endTime,
-          customer: booking.customer.name,
-          customerPhone: booking.customer.phone1,
-          quantity: booking.items.reduce((sum: number, item: any) => sum + item.quantity, 0),
+          customer: (booking as any).customer.name,
+          customerPhone: (booking as any).customer.phone1,
+          quantity: (booking.items as any[]).reduce((sum: number, item: any) => sum + item.quantity, 0),
           status: calculateBookingStatus(booking.startDate, booking.endDate)
         })),
       reason: !isAvailable ? `Only ${availableQuantity} units available, but ${requestedQuantity} requested` : undefined
