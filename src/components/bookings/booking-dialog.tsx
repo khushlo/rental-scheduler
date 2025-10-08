@@ -1196,64 +1196,35 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
                       </button>
                     </div>
                     
-                    {/* Item Notes - Expandable */}
-                    {item.productId > 0 && (
-                      <div>
-                        {!expandedNotes.has(index) ? (
-                          <button
-                            type="button"
-                            onClick={() => toggleNoteExpansion(index)}
-                            className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
-                              hasNoteContent(index)
-                                ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600 text-blue-700 dark:text-blue-300'
-                                : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
-                            }`}
-                            disabled={isSubmitting}
-                          >
-                            <MessageSquare size={16} />
-                            {hasNoteContent(index) ? 'Edit Note' : 'Add Note'}
-                            {hasNoteContent(index) && (
-                              <span className="text-xs font-medium">
-                                ({item.notes?.length} chars)
-                              </span>
-                            )}
-                          </button>
-                        ) : (
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Item Notes
-                              </label>
-                              <button
-                                type="button"
-                                onClick={() => toggleNoteExpansion(index)}
-                                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
-                                disabled={isSubmitting}
-                                title="Collapse notes"
-                              >
-                                <X size={16} />
-                              </button>
-                            </div>
-                            <textarea
-                              value={item.notes || ''}
-                              onChange={(e) => updateBookingItem(index, 'notes', e.target.value)}
-                              disabled={isSubmitting}
-                              placeholder="Enter notes for this item..."
-                              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50 resize-none"
-                              rows={3}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    
-                    {/* Custom Timing Button and Fields */}
-                    {item.productId > 0 && (
-                      <div>
+                    {/* Item Notes and Custom Timing Buttons - Always Show */}
+                    <div className="space-y-3">
+                      {/* Buttons Row */}
+                      <div className="flex items-center gap-3">
+                        {/* Add Note Button */}
+                        <button
+                          type="button"
+                          onClick={() => toggleNoteExpansion(index)}
+                          className={`flex-1 flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                            hasNoteContent(index)
+                              ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600 text-blue-700 dark:text-blue-300'
+                              : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
+                          }`}
+                          disabled={isSubmitting}
+                        >
+                          <MessageSquare size={16} />
+                          {hasNoteContent(index) ? 'Edit Note' : 'Add Note'}
+                          {hasNoteContent(index) && (
+                            <span className="text-xs font-medium">
+                              ({item.notes?.length} chars)
+                            </span>
+                          )}
+                        </button>
+                        
+                        {/* Custom Timing Button */}
                         <button
                           type="button"
                           onClick={() => toggleCustomTiming(index)}
-                          className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                          className={`flex-1 flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
                             item.hasCustomTiming
                               ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600 text-blue-700 dark:text-blue-300'
                               : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
@@ -1263,65 +1234,93 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
                           <Clock size={16} />
                           {item.hasCustomTiming ? 'Remove Custom Timing' : 'Set Custom Timing'}
                         </button>
-                        
-                        {/* Custom Timing Fields */}
-                        {item.hasCustomTiming && (
-                          <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
-                            <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-3">
-                              Custom Timing for This Item
-                            </h4>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <label className="block text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
-                                  Start Date
-                                </label>
-                                <input
-                                  type="date"
-                                  value={item.itemStartDate || ''}
-                                  onChange={(e) => updateBookingItem(index, 'itemStartDate', e.target.value)}
-                                  disabled={isSubmitting}
-                                  className="w-full px-2 py-1 text-xs border border-blue-300 dark:border-blue-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent dark:bg-blue-900/30 dark:text-blue-100"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
-                                  Start Time
-                                </label>
-                                <input
-                                  type="time"
-                                  value={item.itemStartTime || ''}
-                                  onChange={(e) => updateBookingItem(index, 'itemStartTime', e.target.value)}
-                                  disabled={isSubmitting}
-                                  className="w-full px-2 py-1 text-xs border border-blue-300 dark:border-blue-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent dark:bg-blue-900/30 dark:text-blue-100"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
-                                  End Date
-                                </label>
-                                <input
-                                  type="date"
-                                  value={item.itemEndDate || ''}
-                                  onChange={(e) => updateBookingItem(index, 'itemEndDate', e.target.value)}
-                                  disabled={isSubmitting}
-                                  className="w-full px-2 py-1 text-xs border border-blue-300 dark:border-blue-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent dark:bg-blue-900/30 dark:text-blue-100"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
-                                  End Time
-                                </label>
-                                <input
-                                  type="time"
-                                  value={item.itemEndTime || ''}
-                                  onChange={(e) => updateBookingItem(index, 'itemEndTime', e.target.value)}
-                                  disabled={isSubmitting}
-                                  className="w-full px-2 py-1 text-xs border border-blue-300 dark:border-blue-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent dark:bg-blue-900/30 dark:text-blue-100"
-                                />
-                              </div>
-                            </div>
+                      </div>
+                      
+                      {/* Expanded Notes Section */}
+                      {expandedNotes.has(index) && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Item Notes
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => toggleNoteExpansion(index)}
+                              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
+                              disabled={isSubmitting}
+                              title="Collapse notes"
+                            >
+                              <X size={16} />
+                            </button>
                           </div>
-                        )}
+                          <textarea
+                            value={item.notes || ''}
+                            onChange={(e) => updateBookingItem(index, 'notes', e.target.value)}
+                            disabled={isSubmitting}
+                            placeholder="Enter notes for this item..."
+                            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50 resize-none"
+                            rows={3}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Custom Timing Fields */}
+                    {item.hasCustomTiming && (
+                      <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
+                        <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-3">
+                          Custom Timing for This Item
+                        </h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
+                              Start Date
+                            </label>
+                            <input
+                              type="date"
+                              value={item.itemStartDate || ''}
+                              onChange={(e) => updateBookingItem(index, 'itemStartDate', e.target.value)}
+                              disabled={isSubmitting}
+                              className="w-full px-2 py-1 text-xs border border-blue-300 dark:border-blue-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent dark:bg-blue-900/30 dark:text-blue-100"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
+                              Start Time
+                            </label>
+                            <input
+                              type="time"
+                              value={item.itemStartTime || ''}
+                              onChange={(e) => updateBookingItem(index, 'itemStartTime', e.target.value)}
+                              disabled={isSubmitting}
+                              className="w-full px-2 py-1 text-xs border border-blue-300 dark:border-blue-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent dark:bg-blue-900/30 dark:text-blue-100"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
+                              End Date
+                            </label>
+                            <input
+                              type="date"
+                              value={item.itemEndDate || ''}
+                              onChange={(e) => updateBookingItem(index, 'itemEndDate', e.target.value)}
+                              disabled={isSubmitting}
+                              className="w-full px-2 py-1 text-xs border border-blue-300 dark:border-blue-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent dark:bg-blue-900/30 dark:text-blue-100"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
+                              End Time
+                            </label>
+                            <input
+                              type="time"
+                              value={item.itemEndTime || ''}
+                              onChange={(e) => updateBookingItem(index, 'itemEndTime', e.target.value)}
+                              disabled={isSubmitting}
+                              className="w-full px-2 py-1 text-xs border border-blue-300 dark:border-blue-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent dark:bg-blue-900/30 dark:text-blue-100"
+                            />
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
