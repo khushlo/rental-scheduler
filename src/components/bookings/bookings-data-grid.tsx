@@ -17,6 +17,11 @@ interface BookingItem {
   subtotal: number;
   notes?: string;
   productId: number;
+  // Individual item timing (optional - if null, uses booking's timing)
+  itemStartDate?: string;
+  itemEndDate?: string;
+  itemStartTime?: string;
+  itemEndTime?: string;
   product: {
     id: number;
     name: string;
@@ -40,6 +45,9 @@ interface Booking {
   updatedAt: string;
   customerId: number;
   items: BookingItem[];
+  // Additional properties for separated entries
+  isCustomTimingEntry?: boolean;
+  originalBookingId?: number;
   customer: {
     id: number;
     name: string;
@@ -53,12 +61,90 @@ interface Booking {
 export function BookingsDataGrid() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
+  const [originalBookings, setOriginalBookings] = useState<Booking[]>([]); // Store original data for search
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   // Function to navigate to invoice page
   const handleGenerateInvoice = (booking: Booking) => {
-    router.push(`/bookings/invoice/${booking.id}`);
+    const invoiceId = booking.originalBookingId || booking.id;
+    router.push(`/bookings/invoice/${invoiceId}`);
+  };
+
+  // Helper function to format custom timing
+  const formatCustomTiming = (item: BookingItem): string => {
+    if (!item.itemStartDate || !item.itemEndDate) return '';
+    
+    const startDate = format(new Date(item.itemStartDate), 'dd MMM, yyyy');
+    const endDate = format(new Date(item.itemEndDate), 'dd MMM, yyyy');
+    const startTime = item.itemStartTime || '';
+    const endTime = item.itemEndTime || '';
+    
+    if (startDate === endDate) {
+      return `${startDate} ${startTime}-${endTime}`;
+    } else {
+      return `${startDate} ${startTime} - ${endDate} ${endTime}`;
+    }
+  };
+
+  // Helper function to separate items by timing type
+  const separateItemsByTiming = (items: BookingItem[]) => {
+    const regularItems = items.filter(item => !item.itemStartDate && !item.itemEndDate);
+    const customTimingItems = items.filter(item => item.itemStartDate || item.itemEndDate);
+    return { regularItems, customTimingItems };
+  };
+
+  // Helper function to create separate booking entries for custom timing items
+  const createSeparateBookingEntries = (bookings: Booking[]): Booking[] => {
+    const separatedEntries: Booking[] = [];
+
+    bookings.forEach(booking => {
+      const { regularItems, customTimingItems } = separateItemsByTiming(booking.items);
+
+      // Create entry for custom timing items (if any)
+      if (customTimingItems.length > 0) {
+        customTimingItems.forEach(customItem => {
+          const customStartDate = customItem.itemStartDate || booking.startDate;
+          const customEndDate = customItem.itemEndDate || booking.endDate;
+          
+          // Create individual entry for each custom timing item
+          const customBookingEntry: Booking = {
+            ...booking,
+            id: booking.id + 0.1 + (customItem.id / 10000), // Unique ID for sorting
+            startDate: customStartDate,
+            endDate: customEndDate,
+            startTime: customItem.itemStartTime || booking.startTime,
+            endTime: customItem.itemEndTime || booking.endTime,
+            items: [customItem], // Only this custom timing item
+            totalAmount: customItem.subtotal, // Use item's subtotal
+            // Calculate status based on custom timing dates
+            status: calculateBookingStatus(customStartDate, customEndDate, booking.status === 'cancelled'),
+            // Add a flag to identify this as a custom timing entry
+            isCustomTimingEntry: true,
+            originalBookingId: booking.id
+          };
+          separatedEntries.push(customBookingEntry as Booking);
+        });
+      }
+
+      // Create entry for regular items (if any)
+      if (regularItems.length > 0) {
+        const regularBookingEntry: Booking = {
+          ...booking,
+          items: regularItems,
+          totalAmount: regularItems.reduce((sum, item) => sum + item.subtotal, 0),
+          // Recalculate status for regular items too, in case original was incorrect
+          status: calculateBookingStatus(booking.startDate, booking.endDate, booking.status === 'cancelled'),
+          // Add a flag to identify this as a regular entry
+          isCustomTimingEntry: false,
+          originalBookingId: booking.id
+        };
+        separatedEntries.push(regularBookingEntry);
+      }
+    });
+
+    // Sort by start date (ascending) so custom timing items appear in correct chronological order
+    return separatedEntries.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
   };
 
   // Custom search function for bookings
@@ -105,6 +191,15 @@ export function BookingsDataGrid() {
         item.product.category?.toLowerCase().includes(searchLower)
       )) return true;
       
+      // Search in custom timing dates (if any)
+      if (booking.items.some(item => {
+        if (item.itemStartDate && format(new Date(item.itemStartDate), 'dd MMM, yyyy').toLowerCase().includes(searchLower)) return true;
+        if (item.itemEndDate && format(new Date(item.itemEndDate), 'dd MMM, yyyy').toLowerCase().includes(searchLower)) return true;
+        if (item.itemStartTime && item.itemStartTime.includes(searchLower)) return true;
+        if (item.itemEndTime && item.itemEndTime.includes(searchLower)) return true;
+        return false;
+      })) return true;
+      
       // Search in status
       if (booking.status.toLowerCase().includes(searchLower)) return true;
       
@@ -138,8 +233,10 @@ export function BookingsDataGrid() {
       const response = await fetch('/api/bookings');
       if (response.ok) {
         const data = await response.json();
-        setBookings(data);
-        setFilteredBookings(data);
+        setOriginalBookings(data); // Store original data
+        const separatedData = createSeparateBookingEntries(data);
+        setBookings(separatedData);
+        setFilteredBookings(separatedData);
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
@@ -150,88 +247,123 @@ export function BookingsDataGrid() {
 
   // Handle search
   const handleSearch = (searchTerm: string) => {
-    const filtered = searchBookings(bookings, searchTerm);
-    setFilteredBookings(filtered);
+    if (!searchTerm.trim()) {
+      // If no search term, show all separated entries
+      const separatedData = createSeparateBookingEntries(originalBookings);
+      setFilteredBookings(separatedData);
+    } else {
+      // Search in original bookings first, then separate the results
+      const filteredOriginal = searchBookings(originalBookings, searchTerm);
+      const separatedFiltered = createSeparateBookingEntries(filteredOriginal);
+      setFilteredBookings(separatedFiltered);
+    }
   };
 
   // Custom mobile card renderer for bookings
-  const renderBookingCard = (booking: Booking, index: number) => (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
-      {/* Header with ID and Status */}
-      <div className="flex items-center justify-between">
-        <code className="text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded font-mono">
-          {formatId(booking.id)}
-        </code>
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBookingStatusColor(booking.status)}`}>
-          {booking.status}
-        </span>
-      </div>
-
-      {/* Customer Info */}
-      <div>
-        <div className="font-medium text-gray-900 dark:text-gray-100">{booking.customer.name}</div>
-        <div className="text-sm text-gray-600 dark:text-gray-400">{booking.customer.phone1}</div>
-      </div>
-
-      {/* Rental Period */}
-      <div className="text-sm">
-        <div className="font-medium text-gray-900 dark:text-gray-100">
-          {format(new Date(booking.startDate), 'dd MMM, yyyy')} - {format(new Date(booking.endDate), 'dd MMM, yyyy')}
-        </div>
-        <div className="text-gray-600 dark:text-gray-400">
-          {booking.startTime} - {booking.endTime}
-        </div>
-        {booking.eventDate && (
-          <div className="text-blue-600 dark:text-blue-400 font-medium mt-1">
-            Event: {format(new Date(booking.eventDate), 'dd MMM, yyyy')}
+  const renderBookingCard = (booking: Booking, index: number) => {
+    const isCustomEntry = booking.isCustomTimingEntry;
+    
+    return (
+      <div className={`border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3 ${
+        isCustomEntry 
+          ? 'bg-blue-50 border-blue-200 dark:border-blue-700' 
+          : 'bg-white dark:bg-gray-800'
+      }`}>
+        {/* Header with ID, Status and Entry Type */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <code className="text-sm bg-gray-100 px-2 py-1 rounded font-mono">
+              {formatId(booking.originalBookingId || booking.id)}
+            </code>
+            {isCustomEntry && (
+              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
+                Custom Timing
+              </span>
+            )}
           </div>
-        )}
-      </div>
-
-      {/* Products */}
-      <div>
-        <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Products ({booking.items.length} item{booking.items.length > 1 ? 's' : ''})
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBookingStatusColor(booking.status)}`}>
+            {booking.status}
+          </span>
         </div>
-        <div className="space-y-1">
-          {booking.items.map((item, idx) => (
-            <div key={idx} className="flex justify-between text-sm">
-              <span className="text-gray-900 dark:text-gray-100">
-                {item.quantity}x {item.product.name}
-              </span>
-              <span className="text-gray-600 dark:text-gray-400">
-                ₹{item.pricePerDay}/day
-              </span>
+
+        {/* Customer Info */}
+        <div>
+          <div className={`font-medium ${isCustomEntry ? 'text-blue-900 dark:text-blue-100' : 'text-gray-900 dark:text-gray-100'}`}>
+            {booking.customer.name}
+          </div>
+          <div className={`text-sm ${isCustomEntry ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'}`}>
+            {booking.customer.phone1}
+          </div>
+        </div>
+
+        {/* Rental Period */}
+        <div className="text-sm">
+          <div className={`font-medium ${isCustomEntry ? 'text-blue-900 dark:text-blue-100' : 'text-gray-900 dark:text-gray-100'}`}>
+            {format(new Date(booking.startDate), 'dd MMM, yyyy')} - {format(new Date(booking.endDate), 'dd MMM, yyyy')}
+          </div>
+          <div className={`${isCustomEntry ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'}`}>
+            {booking.startTime} - {booking.endTime}
+          </div>
+          {booking.eventDate && (
+            <div className="text-blue-600 dark:text-blue-400 font-medium mt-1">
+              Event: {format(new Date(booking.eventDate), 'dd MMM, yyyy')}
             </div>
-          ))}
+          )}
         </div>
-      </div>
 
-      {/* Total Amount */}
-      <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-600">
-        <span className="font-medium text-green-600 text-lg">
-          ₹{booking.totalAmount.toFixed(2)}
-        </span>
-        <div className="flex items-center space-x-1">
-          <button
-            onClick={() => handleGenerateInvoice(booking)}
-            className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
-            title="Generate Invoice"
-          >
-            <FileText className="h-4 w-4" />
-          </button>
-          <EditBookingForm 
-            booking={booking} 
-            onBookingUpdated={fetchBookings}
-          />
-          <DeleteBookingButton 
-            booking={booking} 
-            onBookingDeleted={fetchBookings}
-          />
+        {/* Products */}
+        <div>
+          <div className={`text-sm font-medium mb-1 ${isCustomEntry ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>
+            Items ({booking.items.length})
+          </div>
+          <div className="space-y-1">
+            {booking.items.map((item, idx) => (
+              <div key={idx} className="flex justify-between text-sm">
+                <span className={`${isCustomEntry ? 'text-blue-900 dark:text-blue-100' : 'text-gray-900 dark:text-gray-100'}`}>
+                  {item.quantity}x {item.product.name}
+                </span>
+                <span className={`${isCustomEntry ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'}`}>
+                  ₹{item.pricePerDay}/day
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Total Amount */}
+        <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-600">
+          <span className="font-medium text-green-600 dark:text-green-400 text-lg">
+            ₹{booking.totalAmount.toFixed(2)}
+          </span>
+          <div className="flex items-center space-x-1">
+            <button
+              onClick={() => handleGenerateInvoice(booking)}
+              className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
+              title="Generate Invoice"
+            >
+              <FileText className="h-4 w-4" />
+            </button>
+            <EditBookingForm 
+              booking={{
+                ...booking,
+                id: booking.originalBookingId || booking.id,
+                // Find original booking to get all items
+                items: originalBookings.find(b => b.id === (booking.originalBookingId || booking.id))?.items || booking.items
+              }} 
+              onBookingUpdated={fetchBookings}
+            />
+            <DeleteBookingButton 
+              booking={{
+                ...booking,
+                id: booking.originalBookingId || booking.id
+              }} 
+              onBookingDeleted={fetchBookings}
+            />
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const columns: Column<Booking>[] = [
     {
@@ -239,36 +371,52 @@ export function BookingsDataGrid() {
       header: 'Booking ID',
       width: '15%',
       render: (booking) => (
-        <code className="text-sm bg-gray-100 px-3 py-2 rounded font-mono">
-          {formatId(booking.id)}
-        </code>
+        <div className="flex items-center gap-2">
+          <code className="text-sm bg-gray-100 px-3 py-2 rounded font-mono">
+            {formatId(booking.originalBookingId || booking.id)}
+          </code>
+          {booking.isCustomTimingEntry && (
+            <span className="text-xs bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full font-medium">
+              Custom
+            </span>
+          )}
+        </div>
       )
     },
     {
       key: 'items',
       header: 'Products',
       width: '25%',
-      render: (booking) => (
-        <div className="space-y-2">
-          <div className="font-medium text-gray-900 dark:text-gray-700 mb-1">
-            {booking.items.length} item{booking.items.length > 1 ? 's' : ''}
-          </div>
-          <div className="space-y-2">
-            {booking.items.map((item, index) => (
-              <div key={index} className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-900 dark:text-gray-700">
-                    {item.quantity}x {item.product.name}
+      render: (booking) => {
+        const isCustomEntry = booking.isCustomTimingEntry;
+        
+        return (
+          <div className={`space-y-2 ${isCustomEntry ? 'p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-700' : ''}`}>
+            <div className={`font-medium text-sm mb-1 ${isCustomEntry ? 'text-blue-800' : 'text-gray-900 dark:text-gray-700'}`}>
+              {isCustomEntry ? 'Custom Timing' : 'Regular Items'} ({booking.items.length})
+            </div>
+            <div className="space-y-1">
+              {booking.items.map((item, index) => (
+                <div key={index} className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className={`text-sm ${isCustomEntry ? 'text-blue-900 font-medium' : 'text-gray-900 dark:text-gray-700'}`}>
+                      {item.quantity}x {item.product.name}
+                    </div>
+                    <div className={`text-xs ${isCustomEntry ? 'text-blue-700' : 'text-gray-600 dark:text-gray-700'}`}>
+                      ₹{item.pricePerDay}/day
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-700">
-                    ₹{item.pricePerDay}/day
-                  </div>
+                  {isCustomEntry && (item.itemStartDate || item.itemEndDate) && (
+                    <div className="text-xs text-blue-600 font-mono">
+                      {formatCustomTiming(item)}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )
+        );
+      }
     },
     {
       key: 'customer',
@@ -308,7 +456,7 @@ export function BookingsDataGrid() {
       render: (booking) => (
         <div>
           {booking.eventDate ? (
-            <div className="text-sm font-medium text-blue-600 dark:text-blue-400">
+            <div className="text-sm font-medium text-blue-600">
               {format(new Date(booking.eventDate), 'dd MMM, yyyy')}
             </div>
           ) : (
@@ -353,11 +501,19 @@ export function BookingsDataGrid() {
             <FileText className="h-4 w-4" />
           </button>
           <EditBookingForm 
-            booking={booking} 
+            booking={{
+              ...booking,
+              id: booking.originalBookingId || booking.id,
+              // Find original booking to get all items
+              items: originalBookings.find(b => b.id === (booking.originalBookingId || booking.id))?.items || booking.items
+            }} 
             onBookingUpdated={fetchBookings}
           />
           <DeleteBookingButton 
-            booking={booking} 
+            booking={{
+              ...booking,
+              id: booking.originalBookingId || booking.id
+            }} 
             onBookingDeleted={fetchBookings}
           />
         </div>

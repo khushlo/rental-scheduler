@@ -52,15 +52,15 @@ export function calculateBookingStatus(
 export function getBookingStatusColor(status: BookingStatus): string {
   switch (status) {
     case 'confirmed':
-      return 'text-blue-600 bg-blue-50 dark:text-blue-600 dark:bg-blue-900/20';
+      return 'text-blue-600 bg-blue-50 dark:text-blue-600';
     case 'active':
-      return 'text-green-600 bg-green-50 dark:text-green-600 dark:bg-green-900/20';
+      return 'text-green-600 bg-green-50 dark:text-green-600';
     case 'completed':
-      return 'text-gray-600 bg-gray-50 dark:text-gray-600 dark:bg-gray-900/20';
+      return 'text-gray-600 bg-gray-50 dark:text-gray-600';
     case 'cancelled':
-      return 'text-red-600 bg-red-50 dark:text-red-600 dark:bg-red-900/20';
+      return 'text-red-600 bg-red-50 dark:text-red-600';
     default:
-      return 'text-gray-600 bg-gray-50 dark:text-gray-600 dark:bg-gray-900/20';
+      return 'text-gray-600 bg-gray-50 dark:text-gray-600';
   }
 }
 
