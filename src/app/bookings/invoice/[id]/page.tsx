@@ -13,6 +13,10 @@ interface BookingItem {
   subtotal: number;
   notes?: string;
   productId: number;
+  itemStartDate?: string | null;
+  itemEndDate?: string | null;
+  itemStartTime?: string | null;
+  itemEndTime?: string | null;
   product: {
     id: number;
     name: string;
@@ -147,14 +151,30 @@ export default function InvoicePage() {
         booking.status === 'cancelled' ? 'background-color: #fee2e2; color: #dc2626;' :
         'background-color: #dbeafe; color: #1d4ed8;';
       
-      const productsHTML = (booking.items || []).map((item, index) => `
-        <tr style="${index % 2 === 0 ? 'background-color: #f9fafb;' : ''}">
-          <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; font-weight: 500; color: #1f2937;">${item.product?.name || 'Unknown Product'}</td>
-          <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4b5563;">${item.quantity || 0}</td>
-          <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; text-align: right; color: #4b5563;">₹${(item.product?.pricePerDay || 0).toLocaleString()}</td>
-          <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600; color: #1f2937;">₹${(item.subtotal || 0).toLocaleString()}</td>
-        </tr>
-      `).join('');
+      const productsHTML = (booking.items || []).map((item, index) => {
+        // Check if item has custom timing
+        const hasCustomTiming = item.itemStartDate && item.itemEndDate && item.itemStartTime && item.itemEndTime;
+        const customTimingHTML = hasCustomTiming ? `
+          <div style="font-size: 10px; color: #2563eb; margin-top: 4px; padding: 2px 6px; background-color: #eff6ff; border-radius: 4px; display: inline-block;">
+            Custom: ${new Date(item.itemStartDate!).toLocaleDateString()} ${item.itemStartTime} - ${new Date(item.itemEndDate!).toLocaleDateString()} ${item.itemEndTime}
+          </div>
+        ` : '';
+        
+        return `
+          <tr style="${index % 2 === 0 ? 'background-color: #f9fafb;' : ''}">
+            <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; font-weight: 500; color: #1f2937;">
+              <div>
+                ${item.product?.name || 'Unknown Product'}
+                ${item.notes ? `<div style="font-size: 12px; color: #6b7280; margin-top: 2px;">${item.notes}</div>` : ''}
+                ${customTimingHTML}
+              </div>
+            </td>
+            <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4b5563;">${item.quantity || 0}</td>
+            <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; text-align: right; color: #4b5563;">₹${(item.product?.pricePerDay || 0).toLocaleString()}</td>
+            <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600; color: #1f2937;">₹${(item.subtotal || 0).toLocaleString()}</td>
+          </tr>
+        `;
+      }).join('');
       
       tempContainer.innerHTML = `
         <div style="max-width: 714px; margin: 0 auto; background: white; color: #1f2937; line-height: 1.5;">
@@ -352,14 +372,32 @@ export default function InvoicePage() {
         booking.status === 'cancelled' ? 'background-color: #fee2e2; color: #dc2626;' :
         'background-color: #dbeafe; color: #1d4ed8;';
       
-      const productsHTML = (booking.items || []).map((item, index) => `
-        <tr style="${index % 2 === 0 ? 'background-color: #f9fafb;' : ''}">
-          <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; font-weight: 500; color: #1f2937;">${item.product?.name || 'Unknown Product'}</td>
-          <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4b5563;">${item.quantity || 0}</td>
-          <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; text-align: right; color: #4b5563;">₹${(item.product?.pricePerDay || 0).toLocaleString()}</td>
-          <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600; color: #1f2937;">₹${(item.subtotal || 0).toLocaleString()}</td>
-        </tr>
-      `).join('');
+      const productsHTML = (booking.items || []).map((item, index) => {
+        // Check if item has custom timing
+        const hasCustomTiming = item.itemStartDate && item.itemEndDate && item.itemStartTime && item.itemEndTime;
+        const customTimingHTML = hasCustomTiming ? `
+          <div style="font-size: 10px; color: #6b7280; margin-top: 4px; font-weight: 500;">
+            <span style="background-color: #f9fafb; padding: 2px 0; border-radius: 4px;">
+              ${new Date(item.itemStartDate!).toLocaleDateString()} ${formatTimeTo12Hour(item.itemStartTime!)} to ${new Date(item.itemEndDate!).toLocaleDateString()} ${formatTimeTo12Hour(item.itemEndTime!)}
+            </span>
+          </div>
+        ` : '';
+        
+        return `
+          <tr style="${index % 2 === 0 ? 'background-color: #f9fafb;' : ''}">
+            <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; font-weight: 500; color: #1f2937;">
+              <div>
+                ${item.product?.name || 'Unknown Product'}
+                ${item.notes ? `<div style="font-size: 12px; color: #6b7280; margin-top: 2px;">${item.notes}</div>` : ''}
+                ${customTimingHTML}
+              </div>
+            </td>
+            <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4b5563;">${item.quantity || 0}</td>
+            <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; text-align: right; color: #4b5563;">₹${(item.product?.pricePerDay || 0).toLocaleString()}</td>
+            <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600; color: #1f2937;">₹${(item.subtotal || 0).toLocaleString()}</td>
+          </tr>
+        `;
+      }).join('');
       
       tempContainer.innerHTML = `
         <div style="max-width: 714px; margin: 0 auto; background: white; color: #1f2937; line-height: 1.5;">
@@ -733,7 +771,20 @@ export default function InvoicePage() {
                     {(booking.items || []).map((item: BookingItem, index: number) => (
                       <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                         <td className="px-3 sm:px-6 py-3 sm:py-4">
-                          <div className="font-medium text-gray-800 text-xs sm:text-sm">{item.product?.name || 'Unknown Product'}</div>
+                          <div>
+                            <div className="font-medium text-gray-800 text-xs sm:text-sm">{item.product?.name || 'Unknown Product'}</div>
+                            {item.notes && (
+                              <div className="text-xs text-gray-600 mt-1">{item.notes}</div>
+                            )}
+                            {/* Custom timing information for individual items */}
+                            {item.itemStartDate && item.itemEndDate && item.itemStartTime && item.itemEndTime && (
+                              <div className="text-[10px] text-gray-600 mt-1 font-medium">
+                                <span className="bg-gray-50 py-0.5 rounded">
+                                  {new Date(item.itemStartDate).toLocaleDateString()} {formatTimeTo12Hour(item.itemStartTime)} to {new Date(item.itemEndDate).toLocaleDateString()} {formatTimeTo12Hour(item.itemEndTime)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4 text-gray-800 text-center text-xs sm:text-sm">{item.quantity || 0}</td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4 text-gray-800 text-right text-xs sm:text-sm">₹{(item.product?.pricePerDay || 0).toLocaleString()}</td>

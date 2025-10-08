@@ -29,6 +29,10 @@ interface BookingInvoiceProps {
       pricePerDay: number;
       subtotal: number;
       notes?: string;
+      itemStartDate?: string | null;
+      itemEndDate?: string | null;
+      itemStartTime?: string | null;
+      itemEndTime?: string | null;
       product: {
         id: number;
         name: string;
@@ -341,6 +345,14 @@ export function BookingInvoice({ booking, onClose }: BookingInvoiceProps) {
                           <p className="font-semibold text-gray-900 text-xs">{item.product.name}</p>
                           {item.notes && (
                             <p className="text-xs text-gray-600 mt-0.5 leading-tight">{item.notes}</p>
+                          )}
+                          {/* Custom timing information for individual items */}
+                          {item.itemStartDate && item.itemEndDate && item.itemStartTime && item.itemEndTime && (
+                            <div className="text-[10px] text-blue-600 mt-1 font-medium">
+                              <span className="bg-blue-50 px-1.5 py-0.5 rounded">
+                                Custom: {new Date(item.itemStartDate).toLocaleDateString()} {item.itemStartTime} - {new Date(item.itemEndDate).toLocaleDateString()} {item.itemEndTime}
+                              </span>
+                            </div>
                           )}
                         </div>
                       </td>
