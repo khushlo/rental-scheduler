@@ -49,7 +49,8 @@ export function ProductsDataGrid() {
       header: 'Product ID',
       width: '18%',
       render: (product) => (
-        <code className="text-sm bg-gray-100 px-3 py-2 rounded font-mono">
+        <code className="text-sm px-3 py-2 rounded font-mono"
+              style={{ backgroundColor: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))' }}>
           {formatId(product.id)}
         </code>
       )
@@ -59,7 +60,7 @@ export function ProductsDataGrid() {
       header: 'Product Name',
       width: '30%',
       render: (product) => (
-        <div className="font-medium text-gray-900">{product.name}</div>
+        <div className="font-medium" style={{ color: 'hsl(var(--foreground))' }}>{product.name}</div>
       ),
       mobileRender: (product) => (
         <div className="font-medium text-gray-900 dark:text-gray-100">{product.name}</div>
@@ -111,7 +112,7 @@ export function ProductsDataGrid() {
       header: 'Created',
       width: '13%',
       render: (product) => (
-        <div className="text-sm text-black">
+        <div className="text-sm" style={{ color: 'hsl(var(--foreground))' }}>
           {format(new Date(product.createdAt), 'dd MMM, yyyy')}
         </div>
       ),
@@ -142,8 +143,8 @@ export function ProductsDataGrid() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Products</h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage your rental products and inventory</p>
+          <h1 className="text-2xl font-bold" style={{ color: 'hsl(var(--foreground))' }}>Products</h1>
+          <p style={{ color: 'hsl(var(--muted-foreground))' }}>Manage your rental products and inventory</p>
         </div>
         <AddProductForm onProductAdded={fetchProducts} />
       </div>

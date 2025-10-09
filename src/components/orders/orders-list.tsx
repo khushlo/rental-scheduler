@@ -3,34 +3,46 @@
 import { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
 import { Calendar, List, Search, Filter } from 'lucide-react';
+import { BookingDialog } from '../bookings/booking-dialog';
 
 interface BookingItem {
-  id: string;
+  id: number;
   quantity: number;
   pricePerDay: number;
   subtotal: number;
   notes?: string;
+  productId: number;
+  itemStartDate?: string | null;
+  itemEndDate?: string | null;
+  itemStartTime?: string | null;
+  itemEndTime?: string | null;
   product: {
-    id: string;
+    id: number;
     name: string;
     pricePerDay: number;
   };
 }
 
 interface Booking {
-  id: string;
+  id: number;
   startDate: string;
   endDate: string;
   startTime: string;
   endTime: string;
+  eventDate?: string;
   totalAmount: number;
-  status: 'PENDING' | 'CONFIRMED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+  advancePayment?: number;
+  status: 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled';
   notes?: string;
+  customerId: number;
   createdAt: string;
   items: BookingItem[];
   customer: {
+    id: number;
     name: string;
-    email: string;
+    phone1: string;
+    phone2?: string;
+    address?: string;
   };
 }
 
@@ -42,6 +54,8 @@ export function OrdersList() {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [sortBy, setSortBy] = useState<'startDate' | 'createdAt' | 'totalAmount'>('startDate');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [editingBooking, setEditingBooking] = useState<any>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   useEffect(() => {
     fetchBookings();
@@ -76,14 +90,15 @@ export function OrdersList() {
           item.product.name.toLowerCase().includes(searchTerm.toLowerCase())
         ) ||
         booking.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        booking.customer.phone1?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        booking.customer.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         booking.notes?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     // Apply status filter
     if (statusFilter !== 'ALL') {
-      filtered = filtered.filter(booking => booking.status === statusFilter);
+      filtered = filtered.filter(booking => booking.status === statusFilter?.toLowerCase());
     }
 
     // Apply sorting
@@ -133,6 +148,28 @@ export function OrdersList() {
     }
   };
 
+  const handleEditBooking = (booking: Booking) => {
+    // Map the booking to match BookingDialog's expected interface
+    const editBooking = {
+      ...booking,
+      advancePayment: booking.advancePayment || 0,
+      eventDate: booking.eventDate || '',
+      status: booking.status.toLowerCase()
+    };
+    setEditingBooking(editBooking);
+    setShowEditDialog(true);
+  };
+
+  const handleCloseEditDialog = () => {
+    setShowEditDialog(false);
+    setEditingBooking(null);
+  };
+
+  const handleBookingUpdated = () => {
+    fetchBookings();
+    handleCloseEditDialog();
+  };
+
   const handleSortChange = (field: typeof sortBy) => {
     if (field === sortBy) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -146,11 +183,12 @@ export function OrdersList() {
     return (
       <div className="space-y-4">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="bg-white p-4 rounded-lg shadow-sm border">
+          <div key={i} className="p-4 rounded-lg shadow-sm border" 
+               style={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }}>
             <div className="animate-pulse space-y-2">
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/3"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+              <div className="h-4 rounded w-1/2" style={{ backgroundColor: 'hsl(var(--muted))' }}></div>
+              <div className="h-3 rounded w-1/3" style={{ backgroundColor: 'hsl(var(--muted))' }}></div>
+              <div className="h-3 rounded w-1/4" style={{ backgroundColor: 'hsl(var(--muted))' }}></div>
             </div>
           </div>
         ))}
@@ -163,24 +201,31 @@ export function OrdersList() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-black dark:text-white">Orders List</h1>
-          <p className="text-black dark:text-gray-400">View all your rental orders in a detailed list format</p>
+          <h1 className="text-2xl font-bold" style={{ color: 'hsl(var(--foreground))' }}>Orders List</h1>
+          <p style={{ color: 'hsl(var(--muted-foreground))' }}>View all your rental orders in a detailed list format</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border">
+      <div className="p-4 rounded-lg shadow-sm border" 
+           style={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }}>
         <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
           {/* Search */}
           <div className="flex-1 max-w-md">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4" 
+                      style={{ color: 'hsl(var(--muted-foreground))' }} />
               <input
                 type="text"
                 placeholder="Search orders..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                style={{ 
+                  backgroundColor: 'hsl(var(--background))', 
+                  borderColor: 'hsl(var(--border))',
+                  color: 'hsl(var(--foreground))'
+                }}
               />
             </div>
           </div>
@@ -188,44 +233,59 @@ export function OrdersList() {
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
             <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-gray-400" />
+              <Filter className="h-4 w-4" style={{ color: 'hsl(var(--muted-foreground))' }} />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                className="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{ 
+                  backgroundColor: 'hsl(var(--background))', 
+                  borderColor: 'hsl(var(--border))',
+                  color: 'hsl(var(--foreground))'
+                }}
               >
                 <option value="ALL">All Status</option>
-                <option value="PENDING">Pending</option>
-                <option value="CONFIRMED">Confirmed</option>
-                <option value="ACTIVE">Active</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="CANCELLED">Cancelled</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="active">Active</option>
+                <option value="completed">Completed</option>
               </select>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-sm text-black">Sort by:</span>
+              <span className="text-sm" style={{ color: 'hsl(var(--foreground))' }}>Sort by:</span>
               <button
                 onClick={() => handleSortChange('startDate')}
                 className={`px-3 py-1 rounded-lg text-sm font-medium ${
-                  sortBy === 'startDate' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                  sortBy === 'startDate' ? 'bg-blue-100 text-blue-700' : ''
                 }`}
+                style={sortBy !== 'startDate' ? { 
+                  backgroundColor: 'hsl(var(--muted))', 
+                  color: 'hsl(var(--muted-foreground))' 
+                } : {}}
               >
                 Date {sortBy === 'startDate' && (sortOrder === 'asc' ? '↑' : '↓')}
               </button>
               <button
                 onClick={() => handleSortChange('totalAmount')}
                 className={`px-3 py-1 rounded-lg text-sm font-medium ${
-                  sortBy === 'totalAmount' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                  sortBy === 'totalAmount' ? 'bg-blue-100 text-blue-700' : ''
                 }`}
+                style={sortBy !== 'totalAmount' ? { 
+                  backgroundColor: 'hsl(var(--muted))', 
+                  color: 'hsl(var(--muted-foreground))' 
+                } : {}}
               >
                 Amount {sortBy === 'totalAmount' && (sortOrder === 'asc' ? '↑' : '↓')}
               </button>
               <button
                 onClick={() => handleSortChange('createdAt')}
                 className={`px-3 py-1 rounded-lg text-sm font-medium ${
-                  sortBy === 'createdAt' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                  sortBy === 'createdAt' ? 'bg-blue-100 text-blue-700' : ''
                 }`}
+                style={sortBy !== 'createdAt' ? { 
+                  backgroundColor: 'hsl(var(--muted))', 
+                  color: 'hsl(var(--muted-foreground))' 
+                } : {}}
               >
                 Created {sortBy === 'createdAt' && (sortOrder === 'asc' ? '↑' : '↓')}
               </button>
@@ -233,7 +293,7 @@ export function OrdersList() {
           </div>
         </div>
 
-        <div className="mt-4 text-sm text-black">
+        <div className="mt-4 text-sm" style={{ color: 'hsl(var(--foreground))' }}>
           Showing {filteredBookings.length} of {bookings.length} orders
         </div>
       </div>
@@ -241,41 +301,43 @@ export function OrdersList() {
       {/* Orders List */}
       <div className="space-y-4">
         {filteredBookings.length === 0 ? (
-          <div className="bg-white p-8 rounded-lg shadow-sm border text-center">
-            <List className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-black mb-2">No orders found</h3>
-            <p className="text-black">Try adjusting your search or filter criteria.</p>
+          <div className="p-8 rounded-lg shadow-sm border text-center"
+               style={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }}>
+            <List className="h-12 w-12 mx-auto mb-4" style={{ color: 'hsl(var(--muted-foreground))' }} />
+            <h3 className="text-lg font-medium mb-2" style={{ color: 'hsl(var(--foreground))' }}>No orders found</h3>
+            <p style={{ color: 'hsl(var(--foreground))' }}>Try adjusting your search or filter criteria.</p>
           </div>
         ) : (
           filteredBookings.map((booking) => (
-            <div key={booking.id} className="bg-white p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow">
+            <div key={booking.id} className="p-6 rounded-lg shadow-sm border hover:shadow-md transition-shadow"
+                 style={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }}>
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <h3 className="text-lg font-semibold text-black">
+                      <h3 className="text-lg font-semibold" style={{ color: 'hsl(var(--foreground))' }}>
                         {booking.items.length} item{booking.items.length > 1 ? 's' : ''}
                       </h3>
                       <div className="mt-1 space-y-1">
                         {booking.items.slice(0, 3).map((item, index) => (
-                          <div key={index} className="text-sm text-black">
+                          <div key={index} className="text-sm" style={{ color: 'hsl(var(--foreground))' }}>
                             {item.quantity}x {item.product.name}
                             {item.quantity > 1 && (
-                              <span className="text-xs text-gray-600 ml-1">
+                              <span className="text-xs ml-1" style={{ color: 'hsl(var(--muted-foreground))' }}>
                                 (₹{item.pricePerDay}/day each)
                               </span>
                             )}
                           </div>
                         ))}
                         {booking.items.length > 3 && (
-                          <div className="text-sm text-gray-600">
+                          <div className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>
                             +{booking.items.length - 3} more items
                           </div>
                         )}
                       </div>
                       <div className="mt-2">
-                        <p className="text-black">{booking.customer.name}</p>
-                        <p className="text-sm text-black">{booking.customer.email}</p>
+                        <p style={{ color: 'hsl(var(--foreground))' }}>{booking.customer.name}</p>
+                        <p className="text-sm" style={{ color: 'hsl(var(--foreground))' }}>{booking.customer.phone1}</p>
                       </div>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
@@ -285,34 +347,35 @@ export function OrdersList() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-black font-medium">Rental Period:</span>
-                      <p className="font-medium text-black">
+                      <span className="font-medium" style={{ color: 'hsl(var(--foreground))' }}>Rental Period:</span>
+                      <p className="font-medium" style={{ color: 'hsl(var(--foreground))' }}>
                         {format(parseISO(booking.startDate), 'MMM dd, yyyy')} - {format(parseISO(booking.endDate), 'MMM dd, yyyy')}
                       </p>
-                      <p className="text-sm text-black">
+                      <p className="text-sm" style={{ color: 'hsl(var(--foreground))' }}>
                         Time: {booking.startTime} - {booking.endTime}
                       </p>
                     </div>
                     <div>
-                      <span className="text-black font-medium">Total Amount:</span>
+                      <span className="font-medium" style={{ color: 'hsl(var(--foreground))' }}>Total Amount:</span>
                       <p className="font-semibold text-green-600 text-lg">₹{booking.totalAmount.toFixed(2)}</p>
                     </div>
                   </div>
 
                   {booking.notes && (
-                    <div className="mt-3 p-3 bg-gray-200 rounded-lg border border-gray-200">
-                      <span className="text-sm text-black font-medium">Notes:</span>
-                      <p className="text-sm text-black mt-1">{booking.notes}</p>
+                    <div className="mt-3 p-3 rounded-lg border"
+                         style={{ backgroundColor: 'hsl(var(--muted))', borderColor: 'hsl(var(--border))' }}>
+                      <span className="text-sm font-medium" style={{ color: 'hsl(var(--foreground))' }}>Notes:</span>
+                      <p className="text-sm mt-1" style={{ color: 'hsl(var(--foreground))' }}>{booking.notes}</p>
                     </div>
                   )}
                 </div>
 
                 <div className="flex items-center gap-2 lg:flex-col lg:items-end">
-                  <button className="text-blue-600 hover:text-blue-800 text-sm font-medium px-3 py-1 rounded border border-blue-200 hover:bg-blue-50">
+                  <button 
+                    onClick={() => handleEditBooking(booking)}
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium px-3 py-1 rounded border border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                  >
                     Edit
-                  </button>
-                  <button className="text-red-600 hover:text-red-800 text-sm font-medium px-3 py-1 rounded border border-red-200 hover:bg-red-50">
-                    Cancel
                   </button>
                 </div>
               </div>
@@ -320,6 +383,17 @@ export function OrdersList() {
           ))
         )}
       </div>
+
+      {/* Edit Booking Dialog */}
+      {editingBooking && (
+        <BookingDialog
+          mode="edit"
+          booking={editingBooking}
+          isOpen={showEditDialog}
+          onClose={handleCloseEditDialog}
+          onSuccess={handleBookingUpdated}
+        />
+      )}
     </div>
   );
 }

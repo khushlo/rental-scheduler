@@ -272,7 +272,8 @@ export function BookingsDataGrid() {
         {/* Header with ID, Status and Entry Type */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <code className="text-sm bg-gray-100 px-2 py-1 rounded font-mono">
+            <code className="text-sm px-2 py-1 rounded font-mono"
+                  style={{ backgroundColor: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))' }}>
               {formatId(booking.originalBookingId || booking.id)}
             </code>
             {isCustomEntry && (
@@ -372,7 +373,8 @@ export function BookingsDataGrid() {
       width: '15%',
       render: (booking) => (
         <div className="flex items-center gap-2">
-          <code className="text-sm bg-gray-100 px-3 py-2 rounded font-mono">
+          <code className="text-sm px-3 py-2 rounded font-mono" 
+                style={{ backgroundColor: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))' }}>
             {formatId(booking.originalBookingId || booking.id)}
           </code>
           {booking.isCustomTimingEntry && (
@@ -392,17 +394,20 @@ export function BookingsDataGrid() {
         
         return (
           <div className={`space-y-2 ${isCustomEntry ? 'p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-700' : ''}`}>
-            <div className={`font-medium text-sm mb-1 ${isCustomEntry ? 'text-blue-800' : 'text-gray-900 dark:text-gray-700'}`}>
+            <div className={`font-medium text-sm mb-1`} 
+                 style={{ color: isCustomEntry ? 'hsl(var(--primary))' : 'hsl(var(--foreground))' }}>
               {isCustomEntry ? 'Custom Timing' : 'Regular Items'} ({booking.items.length})
             </div>
             <div className="space-y-1">
               {booking.items.map((item, index) => (
                 <div key={index} className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <div className={`text-sm ${isCustomEntry ? 'text-blue-900 font-medium' : 'text-gray-900 dark:text-gray-700'}`}>
+                    <div className="text-sm" 
+                         style={{ color: isCustomEntry ? 'hsl(var(--primary))' : 'hsl(var(--foreground))' }}>
                       {item.quantity}x {item.product.name}
                     </div>
-                    <div className={`text-xs ${isCustomEntry ? 'text-blue-700' : 'text-gray-600 dark:text-gray-700'}`}>
+                    <div className="text-xs" 
+                         style={{ color: isCustomEntry ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}>
                       ₹{item.pricePerDay}/day
                     </div>
                   </div>
@@ -425,8 +430,8 @@ export function BookingsDataGrid() {
       render: (booking) => (
         <div className="space-y-2">
           <div>
-            <div className="font-medium text-gray-900 dark:text-gray-700">{booking.customer.name}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-500">{booking.customer.phone1}</div>
+            <div className="font-medium" style={{ color: 'hsl(var(--foreground))' }}>{booking.customer.name}</div>
+            <div className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{booking.customer.phone1}</div>
           </div>
         </div>
       )
@@ -437,13 +442,13 @@ export function BookingsDataGrid() {
       width: '15%',
       render: (booking) => (
         <div>
-          <div className="text-sm font-medium text-gray-900 dark:text-gray-700">
+          <div className="text-sm font-medium" style={{ color: 'hsl(var(--foreground))' }}>
             {format(new Date(booking.startDate), 'dd MMM, yyyy')}
           </div>
-          <div className="text-xs text-gray-600 dark:text-gray-600">
+          <div className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
             {booking.startTime} - {booking.endTime}
           </div>
-          <div className="text-sm text-gray-900 dark:text-gray-700">
+          <div className="text-sm" style={{ color: 'hsl(var(--foreground))' }}>
             to {format(new Date(booking.endDate), 'dd MMM, yyyy')}
           </div>
         </div>
@@ -460,7 +465,7 @@ export function BookingsDataGrid() {
               {format(new Date(booking.eventDate), 'dd MMM, yyyy')}
             </div>
           ) : (
-            <div className="text-xs text-gray-400 dark:text-gray-500">
+            <div className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
               Not set
             </div>
           )}
@@ -525,8 +530,8 @@ export function BookingsDataGrid() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Bookings</h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage rental bookings and schedules</p>
+          <h1 className="text-2xl font-bold" style={{ color: 'hsl(var(--foreground))' }}>Bookings</h1>
+          <p style={{ color: 'hsl(var(--muted-foreground))' }}>Manage rental bookings and schedules</p>
         </div>
         <AddBookingForm onBookingAdded={fetchBookings} />
       </div>
@@ -541,8 +546,6 @@ export function BookingsDataGrid() {
         emptyMessage="No bookings found. Create your first booking to get started."
         renderCard={renderBookingCard}
       />
-
-
     </div>
   );
 }

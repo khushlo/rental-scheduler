@@ -51,7 +51,8 @@ export function CustomersDataGrid() {
       header: 'Customer ID',
       width: '18%',
       render: (customer) => (
-        <code className="text-sm bg-gray-100 px-3 py-2 rounded font-mono">
+        <code className="text-sm px-3 py-2 rounded font-mono"
+              style={{ backgroundColor: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))' }}>
           {formatId(customer.id)}
         </code>
       )
@@ -62,8 +63,8 @@ export function CustomersDataGrid() {
       width: '22%',
       render: (customer) => (
         <div>
-          <div className="font-medium text-gray-900 dark:text-gray-700">{customer.name}</div>
-          <div className="text-sm text-gray-600 dark:text-gray-500">{customer.phone1}</div>
+          <div className="font-medium" style={{ color: 'hsl(var(--foreground))' }}>{customer.name}</div>
+          <div className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{customer.phone1}</div>
         </div>
       )
     },
@@ -73,9 +74,9 @@ export function CustomersDataGrid() {
       width: '1/4',
       render: (customer) => (
         <div className="text-sm">
-          <div className="text-black font-medium">{customer.phone1}</div>
+          <div className="font-medium" style={{ color: 'hsl(var(--foreground))' }}>{customer.phone1}</div>
           {customer.phone2 && (
-            <div className="text-gray-600 dark:text-gray-500">{customer.phone2}</div>
+            <div style={{ color: 'hsl(var(--muted-foreground))' }}>{customer.phone2}</div>
           )}
         </div>
       )
@@ -85,7 +86,7 @@ export function CustomersDataGrid() {
       header: 'Address',
       width: '1/5',
       render: (customer) => (
-        <span className="text-sm text-black truncate max-w-xs block">
+        <span className="text-sm truncate max-w-xs block" style={{ color: 'hsl(var(--foreground))' }}>
           {customer.address || '-'}
         </span>
       )
@@ -95,7 +96,8 @@ export function CustomersDataGrid() {
       header: 'Bookings',
       width: '1/8',
       render: (customer) => (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-black">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+              style={{ backgroundColor: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))' }}>
           {customer._count?.bookings || 0}
         </span>
       )
@@ -105,7 +107,7 @@ export function CustomersDataGrid() {
       header: 'Joined',
       width: '1/6',
       render: (customer) => (
-        <div className="text-sm text-black">
+        <div className="text-sm" style={{ color: 'hsl(var(--foreground))' }}>
           {format(new Date(customer.createdAt), 'MMM dd, yyyy')}
         </div>
       )
@@ -133,8 +135,8 @@ export function CustomersDataGrid() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-black dark:text-gray-100">Customers</h1>
-          <p className="text-gray-800 dark:text-gray-400">Manage your customer database and contact information</p>
+          <h1 className="text-2xl font-bold" style={{ color: 'hsl(var(--foreground))' }}>Customers</h1>
+          <p style={{ color: 'hsl(var(--muted-foreground))' }}>Manage your customer database and contact information</p>
         </div>
         <AddCustomerForm onCustomerAdded={fetchCustomers} />
       </div>

@@ -200,34 +200,51 @@ export function DataGrid<T extends Record<string, any>>({
           /* Desktop Table View */
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead style={{ backgroundColor: 'hsl(var(--muted))' }}>
                 <tr>
                   {columns.map((column, index) => (
                     <th
                       key={String(column.key) + index}
-                      className="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider"
-                      style={column.width ? { width: column.width } : undefined}
+                      className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                      style={{ 
+                        width: column.width || undefined,
+                        color: 'hsl(var(--muted-foreground))'
+                      }}
                     >
                       {column.header}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y" 
+                     style={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }}>
                 {currentData.length === 0 ? (
                   <tr>
                     <td 
                       colSpan={columns.length}
-                      className="px-4 py-8 text-center text-black"
+                      className="px-4 py-8 text-center"
+                      style={{ color: 'hsl(var(--foreground))' }}
                     >
                       {emptyMessage}
                     </td>
                   </tr>
                 ) : (
                   currentData.map((item, rowIndex) => (
-                    <tr key={rowIndex} className="hover:bg-gray-50">
+                    <tr key={rowIndex} className="hover:opacity-75"
+                        style={{ backgroundColor: 'hsl(var(--card))' }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'hsl(var(--muted))';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'hsl(var(--card))';
+                        }}>
                       {columns.map((column, colIndex) => (
-                        <td key={String(column.key) + colIndex} className="px-4 py-4 whitespace-nowrap text-sm text-black">
+                        <td key={String(column.key) + colIndex} 
+                            className="px-4 py-4 whitespace-nowrap text-sm"
+                            style={{ 
+                              color: 'hsl(var(--foreground))',
+                              borderTopColor: 'hsl(var(--border))'
+                            }}>
                           {column.render 
                             ? column.render(item, startIndex + rowIndex)
                             : String(item[column.key] || '-')
