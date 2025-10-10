@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,83 +7,88 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Product {
-  id          Int      @id @default(autoincrement())
-  name        String
-  quantity    Int      @default(1)
-  rentPrice   Float
-  status      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model Tenant {
+  id        Int        @id @default(autoincrement())
+  name      String
+  subdomain String     @unique
+  domain    String?
+  settings  Json?
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @default(now()) @updatedAt
+  bookings  Booking[]
+  customers Customer[]
+  products  Product[]
 
-  // Relationships
+  @@map("tenants")
+}
+
+model Product {
+  id           Int           @id @default(autoincrement())
+  name         String
+  quantity     Int           @default(1)
+  rentPrice    Float
+  status       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  tenantId     Int           @default(1)
   bookingItems BookingItem[]
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("products")
 }
 
 model Customer {
-  id          Int      @id @default(autoincrement())
-  name        String
-  phone1      String   // Primary phone (required)
-  phone2      String?  // Secondary phone (optional)
-  address     String?
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relationships
-  bookings Booking[]
+  id        Int       @id @default(autoincrement())
+  name      String
+  phone1    String
+  phone2    String?
+  address   String?
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  tenantId  Int       @default(1)
+  bookings  Booking[]
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("customers")
 }
 
 model Booking {
-  id          Int           @id @default(autoincrement())
-  startDate   DateTime
-  endDate     DateTime
-  startTime   String        @default("09:00")
-  endTime     String        @default("17:00")
-  eventDate   DateTime?     // Optional event date
-  totalAmount Float
-  advancePayment Float @default(0)
-  notes       String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  // Foreign Keys
-  customerId Int
-
-  // Relationships
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  items    BookingItem[]
+  id             Int           @id @default(autoincrement())
+  startDate      DateTime
+  endDate        DateTime
+  startTime      String        @default("09:00")
+  endTime        String        @default("17:00")
+  totalAmount    Float
+  advancePayment Float         @default(0)
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  customerId     Int
+  eventDate      DateTime?
+  tenantId       Int           @default(1)
+  items          BookingItem[]
+  customer       Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("bookings")
 }
 
 model BookingItem {
-  id        Int     @id @default(autoincrement())
-  quantity  Int     @default(1)
-  pricePerDay Float
-  subtotal  Float
-  notes     String?
-  
-  // Individual item timing (optional - if null, uses booking's timing)
-  itemStartDate   DateTime?
-  itemEndDate     DateTime?
-  itemStartTime   String?
-  itemEndTime     String?
-
-  // Foreign Keys
-  bookingId Int
-  productId Int
-
-  // Relationships
-  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id            Int       @id @default(autoincrement())
+  quantity      Int       @default(1)
+  pricePerDay   Float
+  subtotal      Float
+  notes         String?
+  bookingId     Int
+  productId     Int
+  itemEndDate   DateTime?
+  itemEndTime   String?
+  itemStartDate DateTime?
+  itemStartTime String?
+  booking       Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("booking_items")
 }
-
-// BookingStatus is calculated dynamically on the UI side based on dates
-// No database status field needed

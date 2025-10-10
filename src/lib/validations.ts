@@ -8,6 +8,17 @@ export const OptionalIdSchema = z.number().int().positive().optional()
 export const BookingIdSchema = z.number().int().positive("Booking ID must be a positive integer")
 export const CustomerIdSchema = z.number().int().positive("Customer ID must be a positive integer")
 export const ProductIdSchema = z.number().int().positive("Product ID must be a positive integer")
+export const TenantIdSchema = z.number().int().positive("Tenant ID must be a positive integer")
+
+// Tenant Schema
+export const TenantSchema = z.object({
+  id: OptionalIdSchema,
+  name: z.string().min(1, "Tenant name is required"),
+  subdomain: z.string().min(1, "Subdomain is required").regex(/^[a-z0-9-]+$/, "Subdomain can only contain lowercase letters, numbers, and hyphens"),
+  domain: z.string().optional(),
+  settings: z.record(z.string(), z.any()).optional(),
+  isActive: z.boolean().default(true),
+})
 
 export const ProductSchema = z.object({
   id: OptionalIdSchema,
@@ -15,6 +26,7 @@ export const ProductSchema = z.object({
   quantity: z.number().min(0, "Quantity must be non-negative").default(1),
   rentPrice: z.number().min(0, "Rent price must be non-negative").default(0),
   status: z.boolean().default(true),
+  tenantId: TenantIdSchema.optional(), // Optional for validation, will be set by API
 })
 
 export const CustomerSchema = z.object({
@@ -24,6 +36,7 @@ export const CustomerSchema = z.object({
   phone2: z.string().optional(),
   address: z.string().optional(),
   notes: z.string().optional(),
+  tenantId: TenantIdSchema.optional(), // Optional for validation, will be set by API
 })
 
 export const BookingItemSchema = z.object({
@@ -52,6 +65,7 @@ export const BookingSchema = z.object({
   advancePayment: z.number().min(0, "Advance payment must be non-negative").default(0),
   notes: z.string().optional(),
   customerId: CustomerIdSchema,
+  tenantId: TenantIdSchema.optional(), // Optional for validation, will be set by API
   items: z.array(BookingItemSchema).min(1, "At least one item is required"),
 }).refine((data) => data.endDate >= data.startDate, {
   message: "End date must be on or after start date",

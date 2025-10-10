@@ -2,10 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { CustomerSchema } from '@/lib/validations'
 import { calculateBookingStatus } from '@/lib/utils'
+import { getTenantFromRequest } from '@/lib/tenant'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const tenantContext = getTenantFromRequest(request)
+    
     const customers = await prisma.customer.findMany({
+      where: {
+        tenantId: tenantContext.tenantId
+      },
       orderBy: { createdAt: 'desc' },
       include: {
         _count: {
@@ -21,11 +27,15 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const tenantContext = getTenantFromRequest(request)
     const body = await request.json()
     const validatedData = CustomerSchema.parse(body)
     
     const customer = await prisma.customer.create({
-      data: validatedData
+      data: {
+        ...validatedData,
+        tenantId: tenantContext.tenantId
+      }
     })
     
     return NextResponse.json(customer, { status: 201 })
@@ -37,6 +47,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const tenantContext = getTenantFromRequest(request)
     const body = await request.json()
     const { id, ...updateData } = body
     
@@ -47,7 +58,10 @@ export async function PUT(request: NextRequest) {
     const validatedData = CustomerSchema.omit({ id: true }).parse(updateData)
     
     const customer = await prisma.customer.update({
-      where: { id },
+      where: { 
+        id,
+        tenantId: tenantContext.tenantId
+      },
       data: validatedData
     })
     
