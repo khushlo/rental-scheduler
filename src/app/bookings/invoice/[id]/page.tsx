@@ -155,7 +155,7 @@ export default function InvoicePage() {
         // Check if item has custom timing
         const hasCustomTiming = item.itemStartDate && item.itemEndDate && item.itemStartTime && item.itemEndTime;
         const customTimingHTML = hasCustomTiming ? `
-          <div style="font-size: 10px; color: #2563eb; margin-top: 4px; padding: 2px 6px; background-color: #eff6ff; border-radius: 4px; display: inline-block;">
+          <div style="font-size: 10px; color: #ffffff; margin-top: 4px; padding: 4px 8px; background-color: #2563eb; border-radius: 6px; display: inline-block; font-weight: 600;">
             Custom: ${new Date(item.itemStartDate!).toLocaleDateString()} ${item.itemStartTime} - ${new Date(item.itemEndDate!).toLocaleDateString()} ${item.itemEndTime}
           </div>
         ` : '';
@@ -209,7 +209,7 @@ export default function InvoicePage() {
             <div style="margin-bottom: 12px;">
               <span style="font-weight: 600; color: #374151; font-size: 14px;">Rental Period:</span>
               <span style="color: #6b7280; margin-left: 8px; font-size: 14px;">
-                From ${booking.startDate ? new Date(booking.startDate).toLocaleDateString('en-IN') : 'N/A'} at ${formatTimeTo12Hour(booking.startTime)} to ${booking.endDate ? new Date(booking.endDate).toLocaleDateString('en-IN') : 'N/A'} at ${formatTimeTo12Hour(booking.endTime)}
+                From ${booking.startDate ? new Date(booking.startDate).toLocaleDateString('en-IN') : 'N/A'} at <span style="background-color: #2563eb; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-weight: 600;">${formatTimeTo12Hour(booking.startTime)}</span> to ${booking.endDate ? new Date(booking.endDate).toLocaleDateString('en-IN') : 'N/A'} at <span style="background-color: #2563eb; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-weight: 600;">${formatTimeTo12Hour(booking.endTime)}</span>
               </span>
             </div>
             <div style="display: flex; gap: 32px;">
@@ -376,10 +376,8 @@ export default function InvoicePage() {
         // Check if item has custom timing
         const hasCustomTiming = item.itemStartDate && item.itemEndDate && item.itemStartTime && item.itemEndTime;
         const customTimingHTML = hasCustomTiming ? `
-          <div style="font-size: 10px; color: #6b7280; margin-top: 4px; font-weight: 500;">
-            <span style="background-color: #f9fafb; padding: 2px 0; border-radius: 4px;">
-              ${new Date(item.itemStartDate!).toLocaleDateString()} ${formatTimeTo12Hour(item.itemStartTime!)} to ${new Date(item.itemEndDate!).toLocaleDateString()} ${formatTimeTo12Hour(item.itemEndTime!)}
-            </span>
+          <div style="font-size: 10px; color: #ffffff; margin-top: 4px; font-weight: 600; padding: 4px 8px; background-color: #2563eb; border-radius: 6px; display: inline-block;">
+            Custom: ${new Date(item.itemStartDate!).toLocaleDateString()} ${formatTimeTo12Hour(item.itemStartTime!)} to ${new Date(item.itemEndDate!).toLocaleDateString()} ${formatTimeTo12Hour(item.itemEndTime!)}
           </div>
         ` : '';
         
@@ -431,7 +429,7 @@ export default function InvoicePage() {
             <div style="margin-bottom: 12px;">
               <span style="font-weight: 600; color: #374151; font-size: 14px;">Rental Period:</span>
               <span style="color: #6b7280; margin-left: 8px; font-size: 14px;">
-                From ${booking.startDate ? new Date(booking.startDate).toLocaleDateString('en-IN') : 'N/A'} at ${formatTimeTo12Hour(booking.startTime)} to ${booking.endDate ? new Date(booking.endDate).toLocaleDateString('en-IN') : 'N/A'} at ${formatTimeTo12Hour(booking.endTime)}
+                From ${booking.startDate ? new Date(booking.startDate).toLocaleDateString('en-IN') : 'N/A'} at <span style="background-color: #2563eb; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-weight: 600;">${formatTimeTo12Hour(booking.startTime)}</span> to ${booking.endDate ? new Date(booking.endDate).toLocaleDateString('en-IN') : 'N/A'} at <span style="background-color: #2563eb; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-weight: 600;">${formatTimeTo12Hour(booking.endTime)}</span>
               </span>
             </div>
             <div style="display: flex; gap: 32px;">
@@ -733,9 +731,9 @@ export default function InvoicePage() {
               <div className="space-y-2 sm:space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
                   <span className="font-medium text-gray-700 text-sm sm:text-base min-w-[120px]">Rental Period:</span>
-                  <span className="text-gray-600 text-sm sm:text-base">
-                    From {booking.startDate ? new Date(booking.startDate).toLocaleDateString('en-IN') : 'N/A'} at {formatTimeTo12Hour(booking.startTime)} to {booking.endDate ? new Date(booking.endDate).toLocaleDateString('en-IN') : 'N/A'} at {formatTimeTo12Hour(booking.endTime)}
-                  </span>
+                  <div className="text-gray-600 text-sm sm:text-base">
+                    From {booking.startDate ? new Date(booking.startDate).toLocaleDateString('en-IN') : 'N/A'} at <span className="bg-blue-600 text-white px-2 py-1 rounded-md font-semibold">{formatTimeTo12Hour(booking.startTime)}</span> to {booking.endDate ? new Date(booking.endDate).toLocaleDateString('en-IN') : 'N/A'} at <span className="bg-blue-600 text-white px-2 py-1 rounded-md font-semibold">{formatTimeTo12Hour(booking.endTime)}</span>
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                   <div className="flex items-center gap-2 sm:gap-4">
@@ -778,9 +776,9 @@ export default function InvoicePage() {
                             )}
                             {/* Custom timing information for individual items */}
                             {item.itemStartDate && item.itemEndDate && item.itemStartTime && item.itemEndTime && (
-                              <div className="text-[10px] text-gray-600 mt-1 font-medium">
-                                <span className="bg-gray-50 py-0.5 rounded">
-                                  {new Date(item.itemStartDate).toLocaleDateString()} {formatTimeTo12Hour(item.itemStartTime)} to {new Date(item.itemEndDate).toLocaleDateString()} {formatTimeTo12Hour(item.itemEndTime)}
+                              <div className="text-[10px] text-white mt-1 font-semibold">
+                                <span className="bg-blue-600 px-2 py-1 rounded-md">
+                                  Custom: {new Date(item.itemStartDate).toLocaleDateString()} {formatTimeTo12Hour(item.itemStartTime)} to {new Date(item.itemEndDate).toLocaleDateString()} {formatTimeTo12Hour(item.itemEndTime)}
                                 </span>
                               </div>
                             )}
