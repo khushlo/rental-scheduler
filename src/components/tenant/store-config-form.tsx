@@ -81,22 +81,22 @@ export default function StoreConfigForm() {
   }
 
   if (isLoading) {
-    return <div className="p-6">Loading store configuration...</div>
+    return <div className="p-6 text-gray-900 dark:text-gray-100">Loading store configuration...</div>
   }
 
   if (!config) {
-    return <div className="p-6">Failed to load store configuration</div>
+    return <div className="p-6 text-red-600 dark:text-red-400">Failed to load store configuration</div>
   }
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Store Configuration</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Store Configuration</h1>
       
       {message && (
         <div className={`mb-4 p-3 rounded ${
           message.includes('successfully') 
-            ? 'bg-green-100 text-green-700' 
-            : 'bg-red-100 text-red-700'
+            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800' 
+            : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
         }`}>
           {message}
         </div>
@@ -105,77 +105,77 @@ export default function StoreConfigForm() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Store Name</label>
+            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Store Name</label>
             <input
               type="text"
               value={config.storeName || ''}
               onChange={(e) => handleInputChange('storeName', e.target.value)}
-              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
               placeholder="Your Store Name"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Store Tagline</label>
+            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Store Tagline</label>
             <input
               type="text"
               value={config.storeTagline || ''}
               onChange={(e) => handleInputChange('storeTagline', e.target.value)}
-              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
               placeholder="Your Store Tagline"
             />
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium mb-2">Store Address</label>
+            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Store Address</label>
             <textarea
               value={config.storeAddress || ''}
               onChange={(e) => handleInputChange('storeAddress', e.target.value)}
-              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent resize-none"
               rows={3}
               placeholder="Your Store Address"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Phone Number</label>
+            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Phone Number</label>
             <input
               type="tel"
               value={config.storePhone || ''}
               onChange={(e) => handleInputChange('storePhone', e.target.value)}
-              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
               placeholder="+1 (555) 123-4567"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Email Address</label>
+            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Email Address</label>
             <input
               type="email"
               value={config.storeEmail || ''}
               onChange={(e) => handleInputChange('storeEmail', e.target.value)}
-              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
               placeholder="info@yourstore.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Website</label>
+            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Website</label>
             <input
               type="url"
               value={config.storeWebsite || ''}
               onChange={(e) => handleInputChange('storeWebsite', e.target.value)}
-              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
               placeholder="https://yourstore.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Currency</label>
+            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Currency</label>
             <select
               value={config.storeCurrency || 'USD'}
               onChange={(e) => handleInputChange('storeCurrency', e.target.value)}
-              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
             >
               <option value="USD">USD - US Dollar</option>
               <option value="EUR">EUR - Euro</option>
@@ -187,11 +187,11 @@ export default function StoreConfigForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Theme</label>
+            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Theme</label>
             <select
               value={config.storeTheme || 'light'}
               onChange={(e) => handleInputChange('storeTheme', e.target.value)}
-              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
             >
               <option value="light">Light</option>
               <option value="dark">Dark</option>
@@ -199,23 +199,23 @@ export default function StoreConfigForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Business License</label>
+            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Business License</label>
             <input
               type="text"
               value={config.businessLicense || ''}
               onChange={(e) => handleInputChange('businessLicense', e.target.value)}
-              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
               placeholder="License Number"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Tax Number</label>
+            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Tax Number</label>
             <input
               type="text"
               value={config.taxNumber || ''}
               onChange={(e) => handleInputChange('taxNumber', e.target.value)}
-              className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
               placeholder="Tax ID Number"
             />
           </div>

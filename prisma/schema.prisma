@@ -17,6 +17,10 @@ model Tenant {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @default(now()) @updatedAt
   
+  // Authentication fields
+  username    String?
+  password    String?
+  
   // Store-related fields for multi-tenant store management
   storeName     String?
   storeTagline  String?

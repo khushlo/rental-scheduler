@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
         name: true,
         subdomain: true,
         domain: true,
+        username: true,
         settings: true,
         isActive: true,
         storeName: true,

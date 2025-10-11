@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Calendar, Package, Users, Home, FileText, Menu, X, Settings } from 'lucide-react';
 import { SimpleToggle } from '@/components/ui/theme-toggle-shadcn';
+import { ProfileDrawer } from '@/components/profile/profile-drawer';
 
 const navigation = [
   {
@@ -91,14 +92,16 @@ export function Navigation() {
             </div>
           </div>
           
-          {/* Desktop Theme Toggle */}
-          <div className="hidden sm:flex items-center">
+          {/* Desktop Theme Toggle and Profile */}
+          <div className="hidden sm:flex items-center space-x-2">
             <SimpleToggle />
+            <ProfileDrawer />
           </div>
 
-          {/* Mobile menu button */}
+          {/* Mobile menu button and profile */}
           <div className="sm:hidden flex items-center space-x-2">
             <SimpleToggle />
+            <ProfileDrawer />
             <button
               onClick={toggleMobileMenu}
               className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 transition-colors"

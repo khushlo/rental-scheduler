@@ -29,6 +29,7 @@ export interface Customer {
 export interface Tenant {
   id: number;
   name: string;
+  username?: string | null;
   storeName?: string | null;
   storeTagline?: string | null;
   storeAddress?: string | null;

@@ -117,6 +117,7 @@ export function tenantInclude(tenantId: number) {
           id: true,
           name: true,
           subdomain: true,
+          username: true,
           settings: true,
           storeName: true,
           storeTagline: true,
