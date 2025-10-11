@@ -67,7 +67,7 @@ export function withTenantContext<T>(data: T, tenantContext: TenantContext) {
 }
 
 /**
- * Default tenant settings
+ * Default tenant settings including store configuration
  */
 export const DEFAULT_TENANT_SETTINGS = {
   theme: 'light',
@@ -80,6 +80,21 @@ export const DEFAULT_TENANT_SETTINGS = {
     enableCalendar: true,
     enableAdvancedBooking: true
   }
+}
+
+/**
+ * Default store configuration for new tenants
+ */
+export const DEFAULT_STORE_CONFIG = {
+  storeName: 'Rental Equipment & Services',
+  storeTagline: 'Professional Equipment Rental',
+  storeAddress: 'Your Store Address',
+  storePhone: 'Your Phone Number',
+  storeEmail: 'info@yourstore.com',
+  storeWebsite: 'https://yourstore.com',
+  storeTheme: 'light',
+  storeCurrency: 'USD',
+  storeTimezone: 'America/New_York'
 }
 
 /**
@@ -102,9 +117,75 @@ export function tenantInclude(tenantId: number) {
           id: true,
           name: true,
           subdomain: true,
-          settings: true
+          settings: true,
+          storeName: true,
+          storeTagline: true,
+          storeAddress: true,
+          storePhone: true,
+          storeEmail: true,
+          storeWebsite: true,
+          storeLogo: true,
+          storeTheme: true,
+          storeCurrency: true,
+          storeTimezone: true
         }
       }
     }
+  }
+}
+
+/**
+ * Get tenant store configuration
+ */
+export function getTenantStoreConfig(tenant: any) {
+  return {
+    storeName: tenant?.storeName || DEFAULT_STORE_CONFIG.storeName,
+    storeTagline: tenant?.storeTagline || DEFAULT_STORE_CONFIG.storeTagline,
+    storeAddress: tenant?.storeAddress || DEFAULT_STORE_CONFIG.storeAddress,
+    storePhone: tenant?.storePhone || DEFAULT_STORE_CONFIG.storePhone,
+    storeEmail: tenant?.storeEmail || DEFAULT_STORE_CONFIG.storeEmail,
+    storeWebsite: tenant?.storeWebsite || DEFAULT_STORE_CONFIG.storeWebsite,
+    storeLogo: tenant?.storeLogo,
+    storeTheme: tenant?.storeTheme || DEFAULT_STORE_CONFIG.storeTheme,
+    storeCurrency: tenant?.storeCurrency || DEFAULT_STORE_CONFIG.storeCurrency,
+    storeTimezone: tenant?.storeTimezone || DEFAULT_STORE_CONFIG.storeTimezone
+  }
+}
+
+/**
+ * Validate store configuration
+ */
+export function validateStoreConfig(storeConfig: any) {
+  const errors: string[] = []
+  
+  if (!storeConfig.storeName || storeConfig.storeName.trim().length < 2) {
+    errors.push('Store name must be at least 2 characters long')
+  }
+  
+  if (storeConfig.storeEmail && !isValidEmail(storeConfig.storeEmail)) {
+    errors.push('Store email must be a valid email address')
+  }
+  
+  if (storeConfig.storeWebsite && !isValidUrl(storeConfig.storeWebsite)) {
+    errors.push('Store website must be a valid URL')
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  }
+}
+
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+function isValidUrl(url: string): boolean {
+  try {
+    new URL(url)
+    return true
+  } catch {
+    return false
   }
 }

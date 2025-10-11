@@ -254,6 +254,22 @@ export async function GET(
       where: { id },
       include: {
         customer: true,
+        tenant: {
+          select: {
+            id: true,
+            name: true,
+            storeName: true,
+            storeTagline: true,
+            storeAddress: true,
+            storePhone: true,
+            storeEmail: true,
+            storeWebsite: true,
+            storeLogo: true,
+            storeTheme: true,
+            storeCurrency: true,
+            storeTimezone: true
+          }
+        },
         items: {
           include: {
             product: true

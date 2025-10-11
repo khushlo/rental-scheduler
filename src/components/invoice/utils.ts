@@ -23,15 +23,17 @@ export const formatTimeTo12Hour = (time24: string): string => {
   }
 };
 
-// Generate invoice data from booking
-export const generateInvoiceData = (booking: any): InvoiceData => {
+// Generate invoice data from booking with tenant store information
+export const generateInvoiceData = (booking: any, tenant?: any): InvoiceData => {
   const invoiceNumber = `INV-${booking.id.toString().padStart(6, '0')}`;
   const invoiceDate = new Date().toLocaleDateString('en-IN');
-  const storeName = process.env.NEXT_PUBLIC_STORE_NAME || 'Rental Equipment & Services';
-  const storeAddress = process.env.NEXT_PUBLIC_STORE_ADDRESS || 'Your Store Address';
-  const storePhone = process.env.NEXT_PUBLIC_STORE_PHONE || 'Your Phone Number';
-  const storeEmail = process.env.NEXT_PUBLIC_STORE_EMAIL || 'Your Email';
-  const storeTagline = process.env.NEXT_PUBLIC_STORE_TAGLINE || 'Your Store Tagline';
+  
+  // Use tenant-specific store details if available, otherwise fallback to environment variables
+  const storeName = tenant?.storeName || process.env.NEXT_PUBLIC_STORE_NAME || 'Rental Equipment & Services';
+  const storeAddress = tenant?.storeAddress || process.env.NEXT_PUBLIC_STORE_ADDRESS || 'Your Store Address';
+  const storePhone = tenant?.storePhone || process.env.NEXT_PUBLIC_STORE_PHONE || 'Your Phone Number';
+  const storeEmail = tenant?.storeEmail || process.env.NEXT_PUBLIC_STORE_EMAIL || 'Your Email';
+  const storeTagline = tenant?.storeTagline || process.env.NEXT_PUBLIC_STORE_TAGLINE || 'Your Store Tagline';
   
   const advancePayment = booking.advancePayment || 0;
   const totalAmount = booking.totalAmount || 0;

@@ -26,6 +26,21 @@ export interface Customer {
   email: string;
 }
 
+export interface Tenant {
+  id: number;
+  name: string;
+  storeName?: string | null;
+  storeTagline?: string | null;
+  storeAddress?: string | null;
+  storePhone?: string | null;
+  storeEmail?: string | null;
+  storeWebsite?: string | null;
+  storeLogo?: string | null;
+  storeTheme?: string | null;
+  storeCurrency?: string | null;
+  storeTimezone?: string | null;
+}
+
 export interface Booking {
   id: number;
   startDate: string;
@@ -40,8 +55,10 @@ export interface Booking {
   createdAt: string;
   updatedAt: string;
   customerId: number;
+  tenantId: number;
   items: BookingItem[];
   customer: Customer;
+  tenant?: Tenant;
 }
 
 export interface InvoiceData {

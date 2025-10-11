@@ -64,8 +64,8 @@ export default function InvoicePage() {
       tempContainer.style.padding = '40px';
       tempContainer.style.boxSizing = 'border-box';
       
-      // Generate invoice data
-      const invoiceData = generateInvoiceData(booking);
+      // Generate invoice data with tenant information
+      const invoiceData = generateInvoiceData(booking, booking.tenant);
       
       // Generate PDF template
       tempContainer.innerHTML = generatePDFTemplate({ invoiceData });
@@ -150,8 +150,8 @@ export default function InvoicePage() {
       tempContainer.style.padding = '40px';
       tempContainer.style.boxSizing = 'border-box';
       
-      // Generate invoice data
-      const invoiceData = generateInvoiceData(booking);
+      // Generate invoice data with tenant information
+      const invoiceData = generateInvoiceData(booking, booking.tenant);
       
       // Generate PDF template
       tempContainer.innerHTML = generatePDFTemplate({ invoiceData });
@@ -343,7 +343,7 @@ export default function InvoicePage() {
         {/* Invoice Content */}
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           <div ref={invoiceRef} className="p-4 sm:p-6 lg:p-8">
-            <InvoiceHTMLComponent invoiceData={generateInvoiceData(booking)} />
+            <InvoiceHTMLComponent invoiceData={generateInvoiceData(booking, booking.tenant)} />
           </div>
         </div>
       </div>

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Calendar, Package, Users, Home, FileText, Menu, X } from 'lucide-react';
+import { Calendar, Package, Users, Home, FileText, Menu, X, Settings } from 'lucide-react';
 import { SimpleToggle } from '@/components/ui/theme-toggle-shadcn';
 
 const navigation = [
@@ -37,6 +37,11 @@ const navigation = [
     name: 'Reports',
     href: '/reports',
     icon: FileText,
+  },
+  {
+    name: 'Store Settings',
+    href: '/settings/store',
+    icon: Settings,
   },
 ];
 

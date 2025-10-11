@@ -18,7 +18,20 @@ export async function GET(request: NextRequest) {
         subdomain: true,
         domain: true,
         settings: true,
-        isActive: true
+        isActive: true,
+        storeName: true,
+        storeTagline: true,
+        storeAddress: true,
+        storePhone: true,
+        storeEmail: true,
+        storeWebsite: true,
+        storeLogo: true,
+        storeTheme: true,
+        storeCurrency: true,
+        storeTimezone: true,
+        businessLicense: true,
+        taxNumber: true,
+        bankDetails: true
       }
     })
 
