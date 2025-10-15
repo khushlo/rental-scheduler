@@ -111,7 +111,7 @@ export const InvoiceHTMLComponent: React.FC<InvoiceHTMLComponentProps> = ({ invo
                     </div>
                   </td>
                   <td className="px-3 sm:px-6 py-3 sm:py-4 text-gray-800 text-center text-xs sm:text-sm">{item.quantity || 0}</td>
-                  <td className="px-3 sm:px-6 py-3 sm:py-4 text-gray-800 text-right text-xs sm:text-sm">₹{(item.product?.pricePerDay || 0).toLocaleString()}</td>
+                  <td className="px-3 sm:px-6 py-3 sm:py-4 text-gray-800 text-right text-xs sm:text-sm">₹{(item.pricePerDay || 0).toLocaleString()}</td>
                   <td className="px-3 sm:px-6 py-3 sm:py-4 text-gray-800 text-right font-medium text-xs sm:text-sm">₹{(item.subtotal || 0).toLocaleString()}</td>
                 </tr>
               ))}

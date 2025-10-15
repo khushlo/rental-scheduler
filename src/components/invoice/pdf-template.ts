@@ -27,7 +27,7 @@ export const generatePDFTemplate = ({ invoiceData }: PDFTemplateProps): string =
           </div>
         </td>
         <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; text-align: center; color: #4b5563;">${item.quantity || 0}</td>
-        <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; text-align: right; color: #4b5563;">₹${(item.product?.pricePerDay || 0).toLocaleString()}</td>
+        <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; text-align: right; color: #4b5563;">₹${(item.pricePerDay || 0).toLocaleString()}</td>
         <td style="padding: 12px 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600; color: #1f2937;">₹${(item.subtotal || 0).toLocaleString()}</td>
       </tr>
     `;
