@@ -22,7 +22,7 @@ export const SwipeToComplete: React.FC<SwipeToCompleteProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef(0);
   const currentXRef = useRef(0);
-  const threshold = 120; // Distance to trigger completion
+  const threshold = 150; // Distance to trigger completion
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (disabled || isCompleting) return;
