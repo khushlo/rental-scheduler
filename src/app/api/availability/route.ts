@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
     // Get product details
     const product = await prisma.product.findUnique({
       where: { id: numericProductId },
-      select: { id: true, name: true, quantity: true, status: true }
+      select: { id: true, name: true, quantity: true, status: true, delayInHours: true }
     })
 
     if (!product) {
@@ -156,12 +156,19 @@ export async function GET(request: NextRequest) {
           itemEndDateTime.setHours(bookingEndHours, bookingEndMinutes, 0, 0);
         }
 
+        // Note: Delay will be applied later in the availability calculation logic
+        // Don't apply delay here as we need to check stock availability first
+
         // If no times provided for the request, use date-only logic (backward compatibility)
         if (!startTime || !endTime) {
           const requestStart = new Date(startDate);
           const requestEnd = new Date(endDate);
-          const itemStart = new Date(item.itemStartDate || booking.startDate);
-          const itemEnd = new Date(item.itemEndDate || booking.endDate);
+          let itemStart = new Date(item.itemStartDate || booking.startDate);
+          let itemEnd = new Date(item.itemEndDate || booking.endDate);
+          
+          // Apply delay hours for date-only logic - delay not applied here initially
+          // Will be handled in the final availability calculation
+          
           return requestStart <= itemEnd && itemStart <= requestEnd;
         }
 
@@ -186,14 +193,110 @@ export async function GET(request: NextRequest) {
     const availableQuantity = product.quantity - bookedQuantity
     const isAvailable = availableQuantity >= requestedQuantity
 
+    // Apply delay logic - check if product has delay requirements
+    let finalAvailability = isAvailable
+    let delayApplied = false
+    let availabilityWithDelay = availableQuantity
+    let delayedOverlappingBookings = overlappingBookings // Initialize with default value
+    
+    if ((product as any).delayInHours && (product as any).delayInHours > 0) {
+      // For products with delay, check if the new booking has sufficient gap time
+      // Create timeline of all existing bookings to check for adequate spacing
+      const delayMilliseconds = (product as any).delayInHours * 60 * 60 * 1000;
+      
+      delayedOverlappingBookings = potentiallyOverlappingBookings.filter(booking => {
+        return booking.items.some((item: any) => {
+          let itemStartDateTime: Date;
+          let itemEndDateTime: Date;
+
+          if (item.itemStartDate && item.itemEndDate && item.itemStartTime && item.itemEndTime) {
+            const itemStartDate = new Date(item.itemStartDate);
+            const [itemStartHours, itemStartMinutes] = item.itemStartTime.split(':').map(Number);
+            itemStartDateTime = new Date(itemStartDate);
+            itemStartDateTime.setHours(itemStartHours, itemStartMinutes, 0, 0);
+
+            const itemEndDate = new Date(item.itemEndDate);
+            const [itemEndHours, itemEndMinutes] = item.itemEndTime.split(':').map(Number);
+            itemEndDateTime = new Date(itemEndDate);
+            itemEndDateTime.setHours(itemEndHours, itemEndMinutes, 0, 0);
+          } else {
+            const bookingStart = new Date(booking.startDate);
+            const [bookingStartHours, bookingStartMinutes] = booking.startTime.split(':').map(Number);
+            itemStartDateTime = new Date(bookingStart);
+            itemStartDateTime.setHours(bookingStartHours, bookingStartMinutes, 0, 0);
+
+            const bookingEnd = new Date(booking.endDate);
+            const [bookingEndHours, bookingEndMinutes] = booking.endTime.split(':').map(Number);
+            itemEndDateTime = new Date(bookingEnd);
+            itemEndDateTime.setHours(bookingEndHours, bookingEndMinutes, 0, 0);
+          }
+
+          if (!startTime || !endTime) {
+            const requestStart = new Date(startDate);
+            const requestEnd = new Date(endDate);
+            let itemStart = new Date(item.itemStartDate || booking.startDate);
+            let itemEnd = new Date(item.itemEndDate || booking.endDate);
+            
+            // Check if there's sufficient delay gap between bookings
+            // Case 1: Existing booking ends before new booking starts
+            if (itemEnd <= requestStart) {
+              const gapAfterExisting = requestStart.getTime() - itemEnd.getTime();
+              return gapAfterExisting < delayMilliseconds; // Conflict if gap is too small
+            }
+            
+            // Case 2: New booking ends before existing booking starts  
+            if (requestEnd <= itemStart) {
+              const gapBeforeExisting = itemStart.getTime() - requestEnd.getTime();
+              return gapBeforeExisting < delayMilliseconds; // Conflict if gap is too small
+            }
+            
+            // Case 3: Bookings overlap in time - always a conflict
+            return true;
+          }
+
+          // For time-based logic - check actual time gaps
+          // Case 1: Existing booking ends before new booking starts
+          if (itemEndDateTime <= requestStartDateTime) {
+            const gapAfterExisting = requestStartDateTime.getTime() - itemEndDateTime.getTime();
+            return gapAfterExisting < delayMilliseconds; // Conflict if gap is too small
+          }
+          
+          // Case 2: New booking ends before existing booking starts
+          if (requestEndDateTime <= itemStartDateTime) {
+            const gapBeforeExisting = itemStartDateTime.getTime() - requestEndDateTime.getTime();
+            return gapBeforeExisting < delayMilliseconds; // Conflict if gap is too small
+          }
+          
+          // Case 3: Bookings overlap in time - always a conflict
+          return true;
+        });
+      })
+
+      const delayedBookedQuantity = delayedOverlappingBookings.reduce((total, booking) => {
+        const status = calculateBookingStatus(booking.startDate, booking.endDate)
+        if (status === 'confirmed' || status === 'active') {
+          return total + (booking.items as any[]).reduce((itemTotal: number, bookingItem: any) => {
+            return itemTotal + bookingItem.quantity
+          }, 0)
+        }
+        return total
+      }, 0)
+
+      availabilityWithDelay = product.quantity - delayedBookedQuantity
+      finalAvailability = availabilityWithDelay >= requestedQuantity
+      delayApplied = true
+    }
+
     return NextResponse.json({
-      available: isAvailable,
+      available: finalAvailability,
       product,
       requestedQuantity,
-      availableQuantity,
+      availableQuantity: delayApplied ? availabilityWithDelay : availableQuantity,
       totalquantity: product.quantity,
-      bookedQuantity,
-      timeAware: !!(startTime && endTime), // Indicate if time-based checking was used
+      bookedQuantity: delayApplied ? (product.quantity - availabilityWithDelay) : bookedQuantity,
+      delayApplied,
+      delayHours: delayApplied ? (product as any).delayInHours : 0,
+      timeAware: !!(startTime && endTime),
       requestPeriod: {
         startDate: startDate,
         endDate: endDate,
@@ -202,7 +305,7 @@ export async function GET(request: NextRequest) {
         startDateTime: requestStartDateTime.toISOString(),
         endDateTime: requestEndDateTime.toISOString()
       },
-      conflictingBookings: overlappingBookings
+      conflictingBookings: (delayApplied ? delayedOverlappingBookings : overlappingBookings)
         .filter(booking => {
           const status = calculateBookingStatus(booking.startDate, booking.endDate)
           return status === 'confirmed' || status === 'active'
@@ -218,7 +321,7 @@ export async function GET(request: NextRequest) {
           quantity: (booking.items as any[]).reduce((sum: number, item: any) => sum + item.quantity, 0),
           status: calculateBookingStatus(booking.startDate, booking.endDate)
         })),
-      reason: !isAvailable ? `Only ${availableQuantity} units available, but ${requestedQuantity} requested` : undefined
+      reason: !finalAvailability ? `Only ${delayApplied ? availabilityWithDelay : availableQuantity} units available${delayApplied ? ' (with ' + (product as any).delayInHours + 'h delay buffer)' : ''}, but ${requestedQuantity} requested` : undefined
     })
   } catch (error) {
     console.error('Availability check error:', error)
@@ -277,8 +380,8 @@ export async function POST(request: NextRequest) {
 
           const product = await prisma.product.findUnique({
             where: { id: productId },
-            select: { id: true, name: true, quantity: true, status: true }
-          })
+            select: { id: true, name: true, quantity: true, status: true, delayInHours: true }
+          }) as any // Use type casting until Prisma regeneration is fixed
 
           if (!product || !product.status) {
             return {
@@ -301,11 +404,17 @@ export async function POST(request: NextRequest) {
             }
           })
 
-          // Filter for actual time-based overlaps if times are provided
+          // Filter for actual time-based overlaps if times are provided (without delay initially)
           const filteredBookings = overlappingBookings.filter(booking => {
-            // If no times provided for the request, use date-only logic
+            // If no times provided for the request, use date-only logic (backward compatibility)
             if (!startTime || !endTime) {
-              return true
+              const requestStart = new Date(startDate);
+              const requestEnd = new Date(endDate);
+              let bookingStart = new Date(booking.startDate);
+              let bookingEnd = new Date(booking.endDate);
+              
+              // Don't apply delay initially - will be handled in availability calculation
+              return requestStart <= bookingEnd && bookingStart <= requestEnd;
             }
 
             // Create DateTime objects for existing booking
@@ -313,9 +422,11 @@ export async function POST(request: NextRequest) {
             const [bookingStartHours, bookingStartMinutes] = booking.startTime.split(':').map(Number)
             bookingStart.setHours(bookingStartHours, bookingStartMinutes, 0, 0)
 
-            const bookingEnd = new Date(booking.endDate)
+            let bookingEnd = new Date(booking.endDate)
             const [bookingEndHours, bookingEndMinutes] = booking.endTime.split(':').map(Number)
             bookingEnd.setHours(bookingEndHours, bookingEndMinutes, 0, 0)
+
+            // Don't apply delay initially - will be handled in availability calculation
 
             // Check for time overlap
             return requestStartDateTime < bookingEnd && bookingStart < requestEndDateTime
@@ -335,13 +446,89 @@ export async function POST(request: NextRequest) {
           const availableQuantity = product.quantity - bookedQuantity
           const isAvailable = availableQuantity >= quantity
 
+          // Apply delay logic - for products with delay, check conflicts with buffer time on BOTH sides
+          let finalAvailability = isAvailable
+          let delayApplied = false
+          let availabilityWithDelay = availableQuantity
+          
+          if (product.delayInHours && product.delayInHours > 0) {
+            // Check availability considering actual time gaps (not double delay buffers)
+            const delayMilliseconds = product.delayInHours * 60 * 60 * 1000;
+            
+            const delayedFilteredBookings = overlappingBookings.filter(booking => {
+              if (!startTime || !endTime) {
+                const requestStart = new Date(startDate);
+                const requestEnd = new Date(endDate);
+                let bookingStart = new Date(booking.startDate);
+                let bookingEnd = new Date(booking.endDate);
+                
+                // Check if there's sufficient delay gap between bookings
+                // Case 1: Existing booking ends before new booking starts
+                if (bookingEnd <= requestStart) {
+                  const gapAfterExisting = requestStart.getTime() - bookingEnd.getTime();
+                  return gapAfterExisting < delayMilliseconds; // Conflict if gap is too small
+                }
+                
+                // Case 2: New booking ends before existing booking starts  
+                if (requestEnd <= bookingStart) {
+                  const gapBeforeExisting = bookingStart.getTime() - requestEnd.getTime();
+                  return gapBeforeExisting < delayMilliseconds; // Conflict if gap is too small
+                }
+                
+                // Case 3: Bookings overlap in time - always a conflict
+                return true;
+              }
+
+              // Create DateTime objects for existing booking
+              const bookingStart = new Date(booking.startDate)
+              const [bookingStartHours, bookingStartMinutes] = booking.startTime.split(':').map(Number)
+              bookingStart.setHours(bookingStartHours, bookingStartMinutes, 0, 0)
+
+              let bookingEnd = new Date(booking.endDate)
+              const [bookingEndHours, bookingEndMinutes] = booking.endTime.split(':').map(Number)
+              bookingEnd.setHours(bookingEndHours, bookingEndMinutes, 0, 0)
+
+              // For time-based logic - check actual time gaps
+              // Case 1: Existing booking ends before new booking starts
+              if (bookingEnd <= requestStartDateTime) {
+                const gapAfterExisting = requestStartDateTime.getTime() - bookingEnd.getTime();
+                return gapAfterExisting < delayMilliseconds; // Conflict if gap is too small
+              }
+              
+              // Case 2: New booking ends before existing booking starts
+              if (requestEndDateTime <= bookingStart) {
+                const gapBeforeExisting = bookingStart.getTime() - requestEndDateTime.getTime();
+                return gapBeforeExisting < delayMilliseconds; // Conflict if gap is too small
+              }
+              
+              // Case 3: Bookings overlap in time - always a conflict
+              return true;
+            })
+
+            const delayedBookedQuantity = delayedFilteredBookings.reduce((total, booking) => {
+              const status = calculateBookingStatus(booking.startDate, booking.endDate)
+              if (status === 'confirmed' || status === 'active') {
+                return total + booking.items.reduce((itemTotal: number, item: any) => {
+                  return itemTotal + item.quantity
+                }, 0)
+              }
+              return total
+            }, 0)
+
+            availabilityWithDelay = product.quantity - delayedBookedQuantity
+            finalAvailability = availabilityWithDelay >= quantity
+            delayApplied = true
+          }
+
           return {
             productId,
-            available: isAvailable,
+            available: finalAvailability,
             product: product.name,
-            availableQuantity,
+            availableQuantity: delayApplied ? availabilityWithDelay : availableQuantity,
             totalquantity: product.quantity,
             requestedQuantity: quantity,
+            delayApplied,
+            delayHours: delayApplied ? product.delayInHours : 0,
             timeAware: !!(startTime && endTime)
           }
         } catch (error) {

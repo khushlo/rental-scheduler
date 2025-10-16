@@ -3,6 +3,15 @@ import { prisma } from '@/lib/prisma'
 import { ProductSchema } from '@/lib/validations'
 import { calculateBookingStatus } from '@/lib/utils'
 
+// Force TypeScript to refresh Prisma types
+type ProductCreateData = {
+  name: string;
+  quantity: number;
+  rentPrice: number;
+  status: boolean;
+  delayInHours?: number;
+}
+
 export async function GET() {
   try {
     const products = await prisma.product.findMany({
@@ -36,6 +45,9 @@ export async function POST(request: NextRequest) {
     if (typeof body.status !== 'boolean') {
       return NextResponse.json({ error: 'Status must be boolean' }, { status: 400 })
     }
+    if (body.delayInHours !== undefined && (typeof body.delayInHours !== 'number' || body.delayInHours < 0)) {
+      return NextResponse.json({ error: 'Delay hours must be a non-negative number' }, { status: 400 })
+    }
     
     const product = await prisma.product.create({
       data: {
@@ -43,7 +55,8 @@ export async function POST(request: NextRequest) {
         quantity: body.quantity,
         rentPrice: body.rentPrice,
         status: body.status,
-      }
+        delayInHours: body.delayInHours || 0,
+      } as any
     })
     
     return NextResponse.json(product, { status: 201 })

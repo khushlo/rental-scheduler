@@ -51,6 +51,7 @@ model Product {
   quantity     Int           @default(1)
   rentPrice    Float
   status       Boolean       @default(true)
+  delayInHours Int           @default(0)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   tenantId     Int           @default(1)

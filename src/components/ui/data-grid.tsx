@@ -230,7 +230,7 @@ export function DataGrid<T extends Record<string, any>>({
                   </tr>
                 ) : (
                   currentData.map((item, rowIndex) => (
-                    <tr key={rowIndex} className="hover:opacity-75"
+                    <tr key={rowIndex} className=""
                         style={{ backgroundColor: 'hsl(var(--card))' }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.backgroundColor = 'hsl(var(--muted))';

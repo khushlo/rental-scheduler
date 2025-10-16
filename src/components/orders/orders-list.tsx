@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format, parseISO } from 'date-fns';
 import { Calendar, List, Search, Filter } from 'lucide-react';
 import { BookingDialog } from '../bookings/booking-dialog';
@@ -57,15 +57,7 @@ export function OrdersList() {
   const [editingBooking, setEditingBooking] = useState<any>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
 
-  useEffect(() => {
-    fetchBookings();
-  }, []);
-
-  useEffect(() => {
-    applyFiltersAndSort();
-  }, [bookings, searchTerm, statusFilter, sortBy, sortOrder]);
-
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/bookings');
@@ -78,9 +70,9 @@ export function OrdersList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const applyFiltersAndSort = () => {
+  const applyFiltersAndSort = useCallback(() => {
     let filtered = [...bookings];
 
     // Apply search filter
@@ -129,7 +121,15 @@ export function OrdersList() {
     });
 
     setFilteredBookings(filtered);
-  };
+  }, [bookings, searchTerm, statusFilter, sortBy, sortOrder]);
+
+  useEffect(() => {
+    fetchBookings();
+  }, [fetchBookings]);
+
+  useEffect(() => {
+    applyFiltersAndSort();
+  }, [applyFiltersAndSort]);
 
   const getStatusColor = (status: Booking['status']) => {
     switch (status) {

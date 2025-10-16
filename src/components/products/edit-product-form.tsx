@@ -9,6 +9,7 @@ interface EditProductFormProps {
     name: string;
     quantity: number;
     rentPrice: number;
+    delayInHours: number;
     status: boolean;
   };
   onProductUpdated: () => void;
@@ -18,6 +19,7 @@ interface ProductFormData {
   name: string;
   quantity: number;
   rentPrice: number;
+  delayInHours: number;
   status: boolean;
 }
 
@@ -25,6 +27,7 @@ interface ProductFormErrors {
   name?: string;
   quantity?: string;
   rentPrice?: string;
+  delayInHours?: string;
   status?: string;
 }
 
@@ -35,6 +38,7 @@ export function EditProductForm({ product, onProductUpdated }: EditProductFormPr
     name: product.name,
     quantity: product.quantity,
     rentPrice: product.rentPrice,
+    delayInHours: product.delayInHours,
     status: product.status,
   });
   const [errors, setErrors] = useState<ProductFormErrors>({});
@@ -45,10 +49,11 @@ export function EditProductForm({ product, onProductUpdated }: EditProductFormPr
       name: product.name,
       quantity: product.quantity,
       rentPrice: product.rentPrice,
+      delayInHours: product.delayInHours,
       status: product.status,
     });
     setErrors({});
-  }, [product.id, product.name, product.quantity, product.rentPrice, product.status]);
+  }, [product.id, product.name, product.quantity, product.rentPrice, product.delayInHours, product.status]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +63,7 @@ export function EditProductForm({ product, onProductUpdated }: EditProductFormPr
     if (!formData.name.trim()) newErrors.name = 'Product name is required';
     if (formData.quantity < 0) newErrors.quantity = 'Quantity must be non-negative';
     if (formData.rentPrice < 0) newErrors.rentPrice = 'Rent price must be non-negative';
+    if (formData.delayInHours < 0) newErrors.delayInHours = 'Delay hours must be non-negative';
     
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -211,6 +217,35 @@ export function EditProductForm({ product, onProductUpdated }: EditProductFormPr
                     placeholder="Enter rent price per day"
                   />
                   {errors.rentPrice && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.rentPrice}</p>}
+                </div>
+
+                {/* Delay Hours */}
+                <div>
+                  <label htmlFor="edit-delayInHours" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Delay Hours
+                  </label>
+                  <input
+                    type="number"
+                    id="edit-delayInHours"
+                    min="0"
+                    value={formData.delayInHours || ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '') {
+                        handleInputChange('delayInHours', 0);
+                      } else {
+                        const numValue = parseInt(value, 10);
+                        if (!isNaN(numValue) && numValue >= 0) {
+                          handleInputChange('delayInHours', numValue);
+                        }
+                      }
+                    }}
+                    className={`mt-1 block w-full rounded-md border ${
+                      errors.delayInHours ? 'border-red-300 dark:border-red-600' : 'border-gray-300 dark:border-gray-600'
+                    } px-3 py-2 placeholder-gray-400 dark:placeholder-gray-500 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100`}
+                    placeholder="Hours to wait before next booking (optional)"
+                  />
+                  {errors.delayInHours && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.delayInHours}</p>}
                 </div>
 
                 {/* Status */}

@@ -26,6 +26,7 @@ export const ProductSchema = z.object({
   quantity: z.number().min(0, "Quantity must be non-negative").default(1),
   rentPrice: z.number().min(0, "Rent price must be non-negative").default(0),
   status: z.boolean().default(true),
+  delayInHours: z.number().min(0, "Delay hours must be non-negative").default(0),
   tenantId: TenantIdSchema.optional(), // Optional for validation, will be set by API
 })
 
