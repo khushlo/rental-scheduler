@@ -13,6 +13,7 @@ interface Product {
   name: string;
   quantity: number;
   rentPrice: number;
+  delayInHours: number;
   status: boolean;
   createdAt: string;
   updatedAt: string;
@@ -47,7 +48,7 @@ export function ProductsDataGrid() {
     {
       key: 'id',
       header: 'Product ID',
-      width: '18%',
+      width: '20%',
       render: (product) => (
         <code className="text-sm px-3 py-2 rounded font-mono"
               style={{ backgroundColor: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))' }}>
@@ -58,7 +59,7 @@ export function ProductsDataGrid() {
     {
       key: 'name',
       header: 'Product Name',
-      width: '30%',
+      width: '35%',
       render: (product) => (
         <div className="font-medium" style={{ color: 'hsl(var(--foreground))' }}>{product.name}</div>
       ),
@@ -82,11 +83,10 @@ export function ProductsDataGrid() {
         </div>
       )
     },
-
     {
       key: 'rentPrice',
       header: 'Rent Price',
-      width: '15%',
+      width: '18%',
       render: (product) => (
         <span className="font-medium text-green-600">
           ₹{product.rentPrice.toFixed(2)}
@@ -96,7 +96,7 @@ export function ProductsDataGrid() {
     {
       key: 'status',
       header: 'Status',
-      width: '12%',
+      width: '15%',
       render: (product) => (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
           product.status 
@@ -108,22 +108,9 @@ export function ProductsDataGrid() {
       )
     },
     {
-      key: 'createdAt',
-      header: 'Created',
-      width: '13%',
-      render: (product) => (
-        <div className="text-sm" style={{ color: 'hsl(var(--foreground))' }}>
-          {format(new Date(product.createdAt), 'dd MMM, yyyy')}
-        </div>
-      ),
-      mobileRender: (product) => (
-        <div className="font-medium text-gray-900 dark:text-gray-100">{format(new Date(product.createdAt), 'dd MMM, yyyy')}</div>
-      )
-    },
-    {
       key: 'actions',
       header: 'Actions',
-      width: '15%',
+      width: '17%',
       render: (product) => (
         <div className="flex items-center space-x-2">
           <EditProductForm 
