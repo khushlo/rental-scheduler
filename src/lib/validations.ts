@@ -48,10 +48,10 @@ export const BookingItemSchema = z.object({
   subtotal: z.number().min(0, "Subtotal must be positive").optional(),
   notes: z.string().optional(),
   // Individual item timing (optional - if null, uses booking's timing)
-  itemStartDate: z.string().optional(),
-  itemEndDate: z.string().optional(),
-  itemStartTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format").optional(),
-  itemEndTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format").optional(),
+  itemStartDate: z.string().nullable().optional(),
+  itemEndDate: z.string().nullable().optional(),
+  itemStartTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format").nullable().optional(),
+  itemEndTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format").nullable().optional(),
   hasCustomTiming: z.boolean().optional(), // UI state (not saved to DB)
 })
 
@@ -67,6 +67,10 @@ export const BookingSchema = z.object({
   notes: z.string().optional(),
   customerId: CustomerIdSchema,
   tenantId: TenantIdSchema.optional(), // Optional for validation, will be set by API
+  // Row Status Code: A=Active, C=Completed, D=Deleted, I=Inactive, O=Obsolete
+  rowStatusCd: z.enum(['A', 'C', 'D', 'I', 'O'], {
+    message: "Status must be one of: A (Active), C (Completed), D (Deleted), I (Inactive), O (Obsolete)"
+  }).default('A').optional(),
   items: z.array(BookingItemSchema).min(1, "At least one item is required"),
 }).refine((data) => data.endDate >= data.startDate, {
   message: "End date must be on or after start date",

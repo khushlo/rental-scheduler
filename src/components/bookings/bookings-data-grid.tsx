@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
-import { Calendar, X, Eye, Search, FileText } from 'lucide-react';
+import { Calendar, X, Eye, Search, FileText, CheckCircle } from 'lucide-react';
 import { DataGrid, Column } from '@/components/ui/data-grid';
+import { SwipeToComplete } from '@/components/ui/swipe-to-complete';
 import { AddBookingForm } from './add-booking-form';
 import { EditBookingForm } from './edit-booking-form';
 import { DeleteBookingButton } from './delete-booking-button';
-import { formatId, searchInIds, calculateBookingStatus, getBookingStatusColor, type BookingStatus } from '@/lib/utils';
+import { formatId, searchInIds, calculateBookingStatus, getBookingStatusColor, getRowStatusInfo, type BookingStatus, type RowStatusCode } from '@/lib/utils';
 
 interface BookingItem {
   id: number;
@@ -44,6 +45,7 @@ interface Booking {
   createdAt: string;
   updatedAt: string;
   customerId: number;
+  rowStatusCd?: 'A' | 'C' | 'D' | 'I' | 'O'; // Row Status Code
   items: BookingItem[];
   // Additional properties for separated entries
   isCustomTimingEntry?: boolean;
@@ -63,6 +65,8 @@ export function BookingsDataGrid() {
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
   const [originalBookings, setOriginalBookings] = useState<Booking[]>([]); // Store original data for search
   const [loading, setLoading] = useState(true);
+  const [updatingStatusId, setUpdatingStatusId] = useState<number | null>(null);
+  const [showCompletedBookings, setShowCompletedBookings] = useState(false);
   const router = useRouter();
 
   // Function to navigate to invoice page
@@ -227,14 +231,31 @@ export function BookingsDataGrid() {
     fetchBookings();
   }, []);
 
+  // Refetch bookings when the completed bookings toggle changes
+  useEffect(() => {
+    fetchBookings();
+  }, [showCompletedBookings]);
+
   const fetchBookings = async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/bookings');
       if (response.ok) {
         const data = await response.json();
-        setOriginalBookings(data); // Store original data
-        const separatedData = createSeparateBookingEntries(data);
+        
+        // Filter bookings based on rowStatusCd
+        const filteredData = data.filter((booking: Booking) => {
+          if (showCompletedBookings) {
+            // Show both Active (A) and Completed (C) bookings
+            return booking.rowStatusCd === 'A' || booking.rowStatusCd === 'C';
+          } else {
+            // Show only Active (A) bookings
+            return booking.rowStatusCd === 'A' || !booking.rowStatusCd; // Include bookings without rowStatusCd for backward compatibility
+          }
+        });
+        
+        setOriginalBookings(filteredData); // Store filtered data
+        const separatedData = createSeparateBookingEntries(filteredData);
         setBookings(separatedData);
         setFilteredBookings(separatedData);
       }
@@ -242,6 +263,44 @@ export function BookingsDataGrid() {
       console.error('Error fetching bookings:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMarkAsCompleted = async (bookingId: number) => {
+    try {
+      setUpdatingStatusId(bookingId);
+      
+      // First get the current booking data
+      const fetchResponse = await fetch(`/api/bookings/${bookingId}`);
+      if (!fetchResponse.ok) {
+        console.error('Failed to fetch booking data');
+        return;
+      }
+      
+      const bookingData = await fetchResponse.json();
+      
+      // Update the booking with the completed status
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...bookingData,
+          rowStatusCd: 'C'
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh bookings to show updated status
+        await fetchBookings();
+      } else {
+        console.error('Failed to update booking status');
+      }
+    } catch (error) {
+      console.error('Error updating booking status:', error);
+    } finally {
+      setUpdatingStatusId(null);
     }
   };
 
@@ -262,8 +321,11 @@ export function BookingsDataGrid() {
   // Custom mobile card renderer for bookings
   const renderBookingCard = (booking: Booking, index: number) => {
     const isCustomEntry = booking.isCustomTimingEntry;
+    const bookingId = booking.originalBookingId || booking.id;
+    const isCompleted = booking.rowStatusCd === 'C';
+    const isUpdating = updatingStatusId === bookingId;
     
-    return (
+    const cardContent = (
       <div className={`border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3 ${
         isCustomEntry 
           ? 'bg-blue-50 border-blue-200 dark:border-blue-700' 
@@ -344,6 +406,21 @@ export function BookingsDataGrid() {
             >
               <FileText className="h-4 w-4" />
             </button>
+            {/* Mark as Completed button - only show for non-completed bookings */}
+            {!isCompleted && (
+              <button
+                onClick={() => handleMarkAsCompleted(bookingId)}
+                disabled={isUpdating}
+                className="p-1 text-green-600 hover:text-green-800 hover:bg-green-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Mark as Completed"
+              >
+                {isUpdating ? (
+                  <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <CheckCircle className="h-4 w-4" />
+                )}
+              </button>
+            )}
             <EditBookingForm 
               booking={{
                 ...booking,
@@ -364,13 +441,29 @@ export function BookingsDataGrid() {
         </div>
       </div>
     );
+
+    // Don't wrap completed bookings in swipe-to-delete
+    if (isCompleted) {
+      return cardContent;
+    }
+
+    // Wrap active bookings in SwipeToComplete for mark as completed functionality
+    return (
+      <SwipeToComplete
+        onComplete={() => handleMarkAsCompleted(bookingId)}
+        disabled={isUpdating}
+        className="mb-2"
+      >
+        {cardContent}
+      </SwipeToComplete>
+    );
   };
 
   const columns: Column<Booking>[] = [
     {
       key: 'id',
       header: 'Booking ID',
-      width: '15%',
+      width: '5%',
       render: (booking) => (
         <div className="flex items-center gap-2">
           <code className="text-sm px-3 py-2 rounded font-mono" 
@@ -426,7 +519,7 @@ export function BookingsDataGrid() {
     {
       key: 'customer',
       header: 'Customer',
-      width: '15%',
+      width: '10%',
       render: (booking) => (
         <div className="space-y-2">
           <div>
@@ -457,7 +550,7 @@ export function BookingsDataGrid() {
     {
       key: 'eventDate',
       header: 'Event Date',
-      width: '12%',
+      width: '10%',
       render: (booking) => (
         <div>
           {booking.eventDate ? (
@@ -475,7 +568,7 @@ export function BookingsDataGrid() {
     {
       key: 'totalAmount',
       header: 'Total Amount',
-      width: '10%',
+      width: '8%',
       render: (booking) => (
         <span className="font-medium text-green-600">
           ₹{booking.totalAmount.toFixed(2)}
@@ -484,8 +577,8 @@ export function BookingsDataGrid() {
     },
     {
       key: 'status',
-      header: 'Status',
-      width: '12%',
+      header: 'Booking Status',
+      width: '8%',
       render: (booking) => (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBookingStatusColor(booking.status)}`}>
           {booking.status}
@@ -505,6 +598,21 @@ export function BookingsDataGrid() {
           >
             <FileText className="h-4 w-4" />
           </button>
+          {/* Mark as Completed button - only show for non-completed bookings */}
+          {booking.rowStatusCd !== 'C' && (
+            <button
+              onClick={() => handleMarkAsCompleted(booking.originalBookingId || booking.id)}
+              disabled={updatingStatusId === (booking.originalBookingId || booking.id)}
+              className="p-1 text-green-600 hover:text-green-800 hover:bg-green-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Mark as Completed"
+            >
+              {updatingStatusId === (booking.originalBookingId || booking.id) ? (
+                <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <CheckCircle className="h-4 w-4" />
+              )}
+            </button>
+          )}
           <EditBookingForm 
             booking={{
               ...booking,
@@ -534,6 +642,36 @@ export function BookingsDataGrid() {
           <p style={{ color: 'hsl(var(--muted-foreground))' }}>Manage rental bookings and schedules</p>
         </div>
         <AddBookingForm onBookingAdded={fetchBookings} />
+      </div>
+
+      {/* Filter Controls */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setShowCompletedBookings(!showCompletedBookings)}
+            className={`px-3 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+              showCompletedBookings
+                ? 'bg-green-600 hover:bg-green-700 text-white'
+                : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            <CheckCircle size={16} />
+            <span className="hidden sm:inline">
+              {showCompletedBookings ? 'Hide Completed Bookings' : 'Load Completed Bookings'}
+            </span>
+            <span className="sm:hidden">
+              {showCompletedBookings ? 'Hide Completed' : 'Show Completed'}
+            </span>
+          </button>
+          
+          <div className="hidden sm:block text-sm text-gray-600 dark:text-gray-400">
+            Showing {showCompletedBookings ? 'Active & Completed' : 'Active Only'} bookings
+          </div>
+        </div>
+        
+        <div className="text-sm text-gray-500 dark:text-gray-400">
+          Total: {filteredBookings.length} bookings
+        </div>
       </div>
 
       <DataGrid

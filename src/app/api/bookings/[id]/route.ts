@@ -166,6 +166,7 @@ export async function PUT(
           advancePayment: validatedData.advancePayment,
           notes: validatedData.notes,
           customerId: validatedData.customerId,
+          rowStatusCd: validatedData.rowStatusCd || 'A', // Set row status code
           items: {
             create: itemsWithSubtotal
           }
@@ -286,6 +287,7 @@ export async function GET(
     const bookingWithStatus = {
       ...booking,
       status: calculateBookingStatus(booking.startDate, booking.endDate),
+      rowStatusCd: booking.rowStatusCd, // Include the new status field
       customer: {
         ...booking.customer,
         email: booking.customer.phone1 // Use phone1 as email placeholder for UI compatibility

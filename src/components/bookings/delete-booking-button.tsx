@@ -30,6 +30,7 @@ interface Booking {
   totalAmount: number;
   status: string;
   notes?: string;
+  rowStatusCd?: 'A' | 'C' | 'D' | 'I' | 'O'; // Row Status Code
   customer: Customer;
   items: BookingItem[];
 }

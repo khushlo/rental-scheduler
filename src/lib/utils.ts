@@ -64,6 +64,45 @@ export function getBookingStatusColor(status: BookingStatus): string {
   }
 }
 
+// Row Status Code utilities
+export type RowStatusCode = 'A' | 'C' | 'D' | 'I' | 'O';
+
+export function getRowStatusInfo(statusCd?: RowStatusCode): { label: string; color: string; icon: string } {
+  switch (statusCd) {
+    case 'C':
+      return { 
+        label: 'Completed', 
+        color: 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/20',
+        icon: '✓'
+      };
+    case 'D':
+      return { 
+        label: 'Deleted', 
+        color: 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/20',
+        icon: '✗'
+      };
+    case 'I':
+      return { 
+        label: 'Inactive', 
+        color: 'text-gray-600 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/20',
+        icon: '◯'
+      };
+    case 'O':
+      return { 
+        label: 'Obsolete', 
+        color: 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/20',
+        icon: '⚠'
+      };
+    case 'A':
+    default:
+      return { 
+        label: 'Active', 
+        color: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/20',
+        icon: '●'
+      };
+  }
+}
+
 // Utility functions
 export function formatDate(date: string | Date): string {
   const dateObj = typeof date === 'string' ? new Date(date) : date;

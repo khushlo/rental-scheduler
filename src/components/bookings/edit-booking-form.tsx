@@ -42,6 +42,7 @@ interface Booking {
   status: string;
   notes?: string;
   customerId: number;
+  rowStatusCd?: 'A' | 'C' | 'D' | 'I' | 'O'; // Row Status Code
   customer: Customer;
   items: BookingItem[];
 }
@@ -67,6 +68,7 @@ export function EditBookingForm({ booking, onBookingUpdated }: EditBookingFormPr
     eventDate: booking.eventDate ? booking.eventDate.split('T')[0] : '',  // Handle optional eventDate
     startTime: booking.startTime || '09:00',
     endTime: booking.endTime || '17:00',
+    rowStatusCd: booking.rowStatusCd || 'A', // Include row status code
     // Transform items to match the expected format
     items: booking.items.map(item => ({
       productId: item.productId,

@@ -91,6 +91,8 @@ model Booking {
   customerId     Int
   eventDate      DateTime?
   tenantId       Int           @default(1)
+  // Row Status Code: A=Active, C=Completed, D=Deleted, I=Inactive, O=Obsolete
+  rowStatusCd    String        @default("A") @db.VarChar(1)
   items          BookingItem[]
   customer       Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
   tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)

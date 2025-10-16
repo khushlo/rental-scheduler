@@ -57,6 +57,7 @@ export interface Booking {
   updatedAt: string;
   customerId: number;
   tenantId: number;
+  rowStatusCd?: 'A' | 'C' | 'D' | 'I' | 'O'; // Row Status Code
   items: BookingItem[];
   customer: Customer;
   tenant?: Tenant;

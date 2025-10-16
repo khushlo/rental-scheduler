@@ -52,6 +52,7 @@ interface Booking {
   status?: string;
   notes?: string;
   customerId: number;
+  rowStatusCd?: 'A' | 'C' | 'D' | 'I' | 'O'; // Row Status Code
   items: BookingItem[];
   customer?: Customer;
 }
@@ -92,6 +93,7 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
     advancePayment: booking?.advancePayment || 0,
     notes: booking?.notes || '',
     customerId: booking?.customerId || 0,
+    rowStatusCd: booking?.rowStatusCd || 'A' as 'A' | 'C' | 'D' | 'I' | 'O',
     items: booking?.items || []
   });
 
@@ -559,6 +561,41 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50 resize-none"
                 rows={3}
               />
+            </div>
+
+            {/* Status Controls */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Booking Status
+              </label>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.rowStatusCd === 'C'}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      rowStatusCd: e.target.checked ? 'C' : 'A'
+                    }))}
+                    disabled={isSubmitting}
+                    className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 dark:focus:ring-green-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    Mark as Completed
+                  </span>
+                </label>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {formData.rowStatusCd === 'C' ? (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                      ✓ Completed
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
+                      ● Active
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Form Actions */}
