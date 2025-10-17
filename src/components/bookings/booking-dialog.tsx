@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, X, RefreshCw } from 'lucide-react';
 import { CustomerSelection } from './dialog/customer-selection';
 import { RentalPeriod } from './dialog/rental-period';
@@ -410,15 +411,19 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 z-50">
-      <div className="rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden border" 
+  // Don't render during SSR
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-[9999]" onClick={onClose}>
+      <div className="rounded-lg shadow-xl w-full max-w-[95vw] sm:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden border" 
            style={{ 
              backgroundColor: 'hsl(var(--card))', 
              color: 'hsl(var(--card-foreground))',
              borderColor: 'hsl(var(--border))'
-           }}>
-        <div className="flex items-center justify-between p-4 sm:p-6 border-b" 
+           }}
+           onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-3 sm:p-4 md:p-6 border-b" 
              style={{ borderColor: 'hsl(var(--border))' }}>
           <div>
             <h2 className="text-xl font-semibold" style={{ color: 'hsl(var(--foreground))' }}>
@@ -451,7 +456,7 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
             </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+          <form onSubmit={handleSubmit} className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-y-auto max-h-[calc(95vh-80px)] sm:max-h-[calc(90vh-100px)]">
             {error && (
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm">
                 {error}
@@ -645,6 +650,7 @@ export function BookingDialog({ mode, booking, onClose, onSuccess, isOpen }: Boo
         onClose={() => setShowAddCustomer(false)}
         onCustomerAdded={handleCustomerAdded}
       />
-    </div>
+    </div>,
+    document.body
   );
 }
