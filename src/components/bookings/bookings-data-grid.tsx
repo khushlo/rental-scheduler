@@ -1,15 +1,19 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { format } from 'date-fns';
-import { Calendar, X, Eye, Search, FileText, CheckCircle } from 'lucide-react';
-import { DataGrid, Column } from '@/components/ui/data-grid';
-import { SwipeToComplete } from '@/components/ui/swipe-to-complete';
-import { AddBookingForm } from './add-booking-form';
-import { EditBookingForm } from './edit-booking-form';
-import { DeleteBookingButton } from './delete-booking-button';
-import { formatId, searchInIds, calculateBookingStatus, getBookingStatusColor, getRowStatusInfo, type BookingStatus, type RowStatusCode } from '@/lib/utils';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { FileText, CheckCircle } from "lucide-react";
+import { DataGrid, Column } from "@/components/ui/data-grid";
+import { AddBookingForm } from "./add-booking-form";
+import { EditBookingForm } from "./edit-booking-form";
+import { DeleteBookingButton } from "./delete-booking-button";
+import {
+  formatId,
+  calculateBookingStatus,
+  getBookingStatusColor,
+  safeFormatDate,
+  type BookingStatus,
+} from "@/lib/utils";
 
 interface BookingItem {
   id: number;
@@ -37,7 +41,7 @@ interface Booking {
   endDate: string;
   startTime: string;
   endTime: string;
-  eventDate?: string;  // Optional event date
+  eventDate?: string; // Optional event date
   totalAmount: number;
   advancePayment?: number;
   status: BookingStatus;
@@ -45,7 +49,7 @@ interface Booking {
   createdAt: string;
   updatedAt: string;
   customerId: number;
-  rowStatusCd?: 'A' | 'C' | 'D' | 'I' | 'O'; // Row Status Code
+  rowStatusCd?: "A" | "C" | "D" | "I" | "O"; // Row Status Code
   items: BookingItem[];
   // Additional properties for separated entries
   isCustomTimingEntry?: boolean;
@@ -67,7 +71,13 @@ export function BookingsDataGrid() {
   const [loading, setLoading] = useState(true);
   const [updatingStatusId, setUpdatingStatusId] = useState<number | null>(null);
   const [showCompletedBookings, setShowCompletedBookings] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
+
+  // Ensure component is mounted on client side to prevent hydration issues
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Function to navigate to invoice page
   const handleGenerateInvoice = (booking: Booking) => {
@@ -77,13 +87,17 @@ export function BookingsDataGrid() {
 
   // Helper function to format custom timing
   const formatCustomTiming = (item: BookingItem): string => {
-    if (!item.itemStartDate || !item.itemEndDate) return '';
-    
-    const startDate = format(new Date(item.itemStartDate), 'dd MMM, yyyy');
-    const endDate = format(new Date(item.itemEndDate), 'dd MMM, yyyy');
-    const startTime = item.itemStartTime || '';
-    const endTime = item.itemEndTime || '';
-    
+    if (!item.itemStartDate || !item.itemEndDate) return "";
+
+    const startDate = safeFormatDate(
+      item.itemStartDate,
+      "dd MMM, yyyy",
+      isMounted
+    );
+    const endDate = safeFormatDate(item.itemEndDate, "dd MMM, yyyy", isMounted);
+    const startTime = item.itemStartTime || "";
+    const endTime = item.itemEndTime || "";
+
     if (startDate === endDate) {
       return `${startDate} ${startTime}-${endTime}`;
     } else {
@@ -93,8 +107,12 @@ export function BookingsDataGrid() {
 
   // Helper function to separate items by timing type
   const separateItemsByTiming = (items: BookingItem[]) => {
-    const regularItems = items.filter(item => !item.itemStartDate && !item.itemEndDate);
-    const customTimingItems = items.filter(item => item.itemStartDate || item.itemEndDate);
+    const regularItems = items.filter(
+      (item) => !item.itemStartDate && !item.itemEndDate
+    );
+    const customTimingItems = items.filter(
+      (item) => item.itemStartDate || item.itemEndDate
+    );
     return { regularItems, customTimingItems };
   };
 
@@ -102,19 +120,21 @@ export function BookingsDataGrid() {
   const createSeparateBookingEntries = (bookings: Booking[]): Booking[] => {
     const separatedEntries: Booking[] = [];
 
-    bookings.forEach(booking => {
-      const { regularItems, customTimingItems } = separateItemsByTiming(booking.items);
+    bookings.forEach((booking) => {
+      const { regularItems, customTimingItems } = separateItemsByTiming(
+        booking.items
+      );
 
       // Create entry for custom timing items (if any)
       if (customTimingItems.length > 0) {
-        customTimingItems.forEach(customItem => {
+        customTimingItems.forEach((customItem) => {
           const customStartDate = customItem.itemStartDate || booking.startDate;
           const customEndDate = customItem.itemEndDate || booking.endDate;
-          
+
           // Create individual entry for each custom timing item
           const customBookingEntry: Booking = {
             ...booking,
-            id: booking.id + 0.1 + (customItem.id / 10000), // Unique ID for sorting
+            id: booking.id + 0.1 + customItem.id / 10000, // Unique ID for sorting
             startDate: customStartDate,
             endDate: customEndDate,
             startTime: customItem.itemStartTime || booking.startTime,
@@ -122,10 +142,14 @@ export function BookingsDataGrid() {
             items: [customItem], // Only this custom timing item
             totalAmount: customItem.subtotal, // Use item's subtotal
             // Calculate status based on custom timing dates
-            status: calculateBookingStatus(customStartDate, customEndDate, booking.status === 'cancelled'),
+            status: calculateBookingStatus(
+              customStartDate,
+              customEndDate,
+              booking.status === "cancelled"
+            ),
             // Add a flag to identify this as a custom timing entry
             isCustomTimingEntry: true,
-            originalBookingId: booking.id
+            originalBookingId: booking.id,
           };
           separatedEntries.push(customBookingEntry as Booking);
         });
@@ -136,93 +160,148 @@ export function BookingsDataGrid() {
         const regularBookingEntry: Booking = {
           ...booking,
           items: regularItems,
-          totalAmount: regularItems.reduce((sum, item) => sum + item.subtotal, 0),
+          totalAmount: regularItems.reduce(
+            (sum, item) => sum + item.subtotal,
+            0
+          ),
           // Recalculate status for regular items too, in case original was incorrect
-          status: calculateBookingStatus(booking.startDate, booking.endDate, booking.status === 'cancelled'),
+          status: calculateBookingStatus(
+            booking.startDate,
+            booking.endDate,
+            booking.status === "cancelled"
+          ),
           // Add a flag to identify this as a regular entry
           isCustomTimingEntry: false,
-          originalBookingId: booking.id
+          originalBookingId: booking.id,
         };
         separatedEntries.push(regularBookingEntry);
       }
     });
 
     // Sort by start date (ascending) so custom timing items appear in correct chronological order
-    return separatedEntries.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    return separatedEntries.sort(
+      (a, b) =>
+        new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+    );
   };
 
   // Custom search function for bookings
-  const searchBookings = (bookings: Booking[], searchTerm: string): Booking[] => {
+  const searchBookings = (
+    bookings: Booking[],
+    searchTerm: string
+  ): Booking[] => {
     if (!searchTerm.trim()) return bookings;
-    
+
     const searchLower = searchTerm.toLowerCase();
-    console.log('Searching for:', searchLower);
-    
-    return bookings.filter(booking => {
-      console.log('Checking booking:', booking.id, 'Customer:', booking.customer?.name);
-      
+    console.log("Searching for:", searchLower);
+
+    return bookings.filter((booking) => {
+      console.log(
+        "Checking booking:",
+        booking.id,
+        "Customer:",
+        booking.customer?.name
+      );
+
       // Search in booking ID (formatted)
       if (formatId(booking.id).toLowerCase().includes(searchLower)) {
-        console.log('Found match in booking ID');
+        console.log("Found match in booking ID");
         return true;
       }
-      
+
       // Search in customer data
       if (booking.customer?.name?.toLowerCase().includes(searchLower)) {
-        console.log('Found match in customer name');
+        console.log("Found match in customer name");
         return true;
       }
       if (booking.customer?.phone1?.toLowerCase().includes(searchLower)) {
-        console.log('Found match in customer phone1');
+        console.log("Found match in customer phone1");
         return true;
       }
       if (booking.customer?.phone2?.toLowerCase().includes(searchLower)) {
-        console.log('Found match in customer phone2');
+        console.log("Found match in customer phone2");
         return true;
       }
       if (booking.customer?.email?.toLowerCase().includes(searchLower)) {
-        console.log('Found match in customer email');
+        console.log("Found match in customer email");
         return true;
       }
       if (booking.customer?.address?.toLowerCase().includes(searchLower)) {
-        console.log('Found match in customer address');
+        console.log("Found match in customer address");
         return true;
       }
-      
+
       // Search in product names and categories
-      if (booking.items.some(item => 
-        item.product.name.toLowerCase().includes(searchLower) ||
-        item.product.category?.toLowerCase().includes(searchLower)
-      )) return true;
-      
+      if (
+        booking.items.some(
+          (item) =>
+            item.product.name.toLowerCase().includes(searchLower) ||
+            item.product.category?.toLowerCase().includes(searchLower)
+        )
+      )
+        return true;
+
       // Search in custom timing dates (if any)
-      if (booking.items.some(item => {
-        if (item.itemStartDate && format(new Date(item.itemStartDate), 'dd MMM, yyyy').toLowerCase().includes(searchLower)) return true;
-        if (item.itemEndDate && format(new Date(item.itemEndDate), 'dd MMM, yyyy').toLowerCase().includes(searchLower)) return true;
-        if (item.itemStartTime && item.itemStartTime.includes(searchLower)) return true;
-        if (item.itemEndTime && item.itemEndTime.includes(searchLower)) return true;
-        return false;
-      })) return true;
-      
+      if (
+        booking.items.some((item) => {
+          if (
+            item.itemStartDate &&
+            safeFormatDate(item.itemStartDate, "dd MMM, yyyy", isMounted)
+              .toLowerCase()
+              .includes(searchLower)
+          )
+            return true;
+          if (
+            item.itemEndDate &&
+            safeFormatDate(item.itemEndDate, "dd MMM, yyyy", isMounted)
+              .toLowerCase()
+              .includes(searchLower)
+          )
+            return true;
+          if (item.itemStartTime && item.itemStartTime.includes(searchLower))
+            return true;
+          if (item.itemEndTime && item.itemEndTime.includes(searchLower))
+            return true;
+          return false;
+        })
+      )
+        return true;
+
       // Search in status
       if (booking.status.toLowerCase().includes(searchLower)) return true;
-      
+
       // Search in notes
       if (booking.notes?.toLowerCase().includes(searchLower)) return true;
-      
+
       // Search in dates (formatted)
-      if (format(new Date(booking.startDate), 'dd MMM, yyyy').toLowerCase().includes(searchLower)) return true;
-      if (format(new Date(booking.endDate), 'dd MMM, yyyy').toLowerCase().includes(searchLower)) return true;
-      if (booking.eventDate && format(new Date(booking.eventDate), 'dd MMM, yyyy').toLowerCase().includes(searchLower)) return true;
-      
+      if (
+        safeFormatDate(booking.startDate, "dd MMM, yyyy", isMounted)
+          .toLowerCase()
+          .includes(searchLower)
+      )
+        return true;
+      if (
+        safeFormatDate(booking.endDate, "dd MMM, yyyy", isMounted)
+          .toLowerCase()
+          .includes(searchLower)
+      )
+        return true;
+      if (
+        booking.eventDate &&
+        safeFormatDate(booking.eventDate, "dd MMM, yyyy", isMounted)
+          .toLowerCase()
+          .includes(searchLower)
+      )
+        return true;
+
       // Search in times
       if (booking.startTime.includes(searchLower)) return true;
       if (booking.endTime.includes(searchLower)) return true;
-      
+
       // Search in amounts (as string)
       if (booking.totalAmount.toString().includes(searchLower)) return true;
       if (booking.advancePayment?.toString().includes(searchLower)) return true;
-      
+
       return false;
     });
   };
@@ -239,28 +318,28 @@ export function BookingsDataGrid() {
   const fetchBookings = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/bookings');
+      const response = await fetch("/api/bookings");
       if (response.ok) {
         const data = await response.json();
-        
+
         // Filter bookings based on rowStatusCd
         const filteredData = data.filter((booking: Booking) => {
           if (showCompletedBookings) {
             // Show both Active (A) and Completed (C) bookings
-            return booking.rowStatusCd === 'A' || booking.rowStatusCd === 'C';
+            return booking.rowStatusCd === "A" || booking.rowStatusCd === "C";
           } else {
             // Show only Active (A) bookings
-            return booking.rowStatusCd === 'A' || !booking.rowStatusCd; // Include bookings without rowStatusCd for backward compatibility
+            return booking.rowStatusCd === "A" || !booking.rowStatusCd; // Include bookings without rowStatusCd for backward compatibility
           }
         });
-        
+
         setOriginalBookings(filteredData); // Store filtered data
         const separatedData = createSeparateBookingEntries(filteredData);
         setBookings(separatedData);
         setFilteredBookings(separatedData);
       }
     } catch (error) {
-      console.error('Error fetching bookings:', error);
+      console.error("Error fetching bookings:", error);
     } finally {
       setLoading(false);
     }
@@ -269,25 +348,25 @@ export function BookingsDataGrid() {
   const handleMarkAsCompleted = async (bookingId: number) => {
     try {
       setUpdatingStatusId(bookingId);
-      
+
       // First get the current booking data
       const fetchResponse = await fetch(`/api/bookings/${bookingId}`);
       if (!fetchResponse.ok) {
-        console.error('Failed to fetch booking data');
+        console.error("Failed to fetch booking data");
         return;
       }
-      
+
       const bookingData = await fetchResponse.json();
-      
+
       // Update the booking with the completed status
       const response = await fetch(`/api/bookings/${bookingId}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           ...bookingData,
-          rowStatusCd: 'C'
+          rowStatusCd: "C",
         }),
       });
 
@@ -295,10 +374,10 @@ export function BookingsDataGrid() {
         // Refresh bookings to show updated status
         await fetchBookings();
       } else {
-        console.error('Failed to update booking status');
+        console.error("Failed to update booking status");
       }
     } catch (error) {
-      console.error('Error updating booking status:', error);
+      console.error("Error updating booking status:", error);
     } finally {
       setUpdatingStatusId(null);
     }
@@ -322,20 +401,27 @@ export function BookingsDataGrid() {
   const renderBookingCard = (booking: Booking, index: number) => {
     const isCustomEntry = booking.isCustomTimingEntry;
     const bookingId = booking.originalBookingId || booking.id;
-    const isCompleted = booking.rowStatusCd === 'C';
+    const isCompleted = booking.rowStatusCd === "C";
     const isUpdating = updatingStatusId === bookingId;
-    
+
     const cardContent = (
-      <div className={`border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3 ${
-        isCustomEntry 
-          ? 'bg-blue-50 border-blue-200 dark:border-blue-700' 
-          : 'bg-white dark:bg-gray-800'
-      }`}>
+      <div
+        className={`border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3 ${
+          isCustomEntry
+            ? "bg-blue-50 border-blue-200 dark:border-blue-700"
+            : "bg-white dark:bg-gray-800"
+        }`}
+      >
         {/* Header with ID, Status and Entry Type */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <code className="text-sm px-2 py-1 rounded font-mono"
-                  style={{ backgroundColor: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))' }}>
+            <code
+              className="text-sm px-2 py-1 rounded font-mono"
+              style={{
+                backgroundColor: "hsl(var(--muted))",
+                color: "hsl(var(--muted-foreground))",
+              }}
+            >
               {formatId(booking.originalBookingId || booking.id)}
             </code>
             {isCustomEntry && (
@@ -344,48 +430,96 @@ export function BookingsDataGrid() {
               </span>
             )}
           </div>
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBookingStatusColor(booking.status)}`}>
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBookingStatusColor(
+              booking.status
+            )}`}
+          >
             {booking.status}
           </span>
         </div>
 
         {/* Customer Info */}
         <div>
-          <div className={`font-medium ${isCustomEntry ? 'text-blue-900 dark:text-blue-100' : 'text-gray-900 dark:text-gray-100'}`}>
+          <div
+            className={`font-medium ${
+              isCustomEntry
+                ? "text-blue-900 dark:text-blue-100"
+                : "text-gray-900 dark:text-gray-100"
+            }`}
+          >
             {booking.customer.name}
           </div>
-          <div className={`text-sm ${isCustomEntry ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'}`}>
+          <div
+            className={`text-sm ${
+              isCustomEntry
+                ? "text-blue-700 dark:text-blue-300"
+                : "text-gray-600 dark:text-gray-400"
+            }`}
+          >
             {booking.customer.phone1}
           </div>
         </div>
 
         {/* Rental Period */}
         <div className="text-sm">
-          <div className={`font-medium ${isCustomEntry ? 'text-blue-900 dark:text-blue-100' : 'text-gray-900 dark:text-gray-100'}`}>
-            {format(new Date(booking.startDate), 'dd MMM, yyyy')} - {format(new Date(booking.endDate), 'dd MMM, yyyy')}
+          <div
+            className={`font-medium ${
+              isCustomEntry
+                ? "text-blue-900 dark:text-blue-100"
+                : "text-gray-900 dark:text-gray-100"
+            }`}
+          >
+            {safeFormatDate(booking.startDate, "dd MMM, yyyy", isMounted)} -{" "}
+            {safeFormatDate(booking.endDate, "dd MMM, yyyy", isMounted)}
           </div>
-          <div className={`${isCustomEntry ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'}`}>
+          <div
+            className={`${
+              isCustomEntry
+                ? "text-blue-700 dark:text-blue-300"
+                : "text-gray-600 dark:text-gray-400"
+            }`}
+          >
             {booking.startTime} - {booking.endTime}
           </div>
           {booking.eventDate && (
             <div className="text-blue-600 dark:text-blue-400 font-medium mt-1">
-              Event: {format(new Date(booking.eventDate), 'dd MMM, yyyy')}
+              Event:{" "}
+              {safeFormatDate(booking.eventDate, "dd MMM, yyyy", isMounted)}
             </div>
           )}
         </div>
 
         {/* Products */}
         <div>
-          <div className={`text-sm font-medium mb-1 ${isCustomEntry ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>
+          <div
+            className={`text-sm font-medium mb-1 ${
+              isCustomEntry
+                ? "text-blue-700 dark:text-blue-300"
+                : "text-gray-700 dark:text-gray-300"
+            }`}
+          >
             Items ({booking.items.length})
           </div>
           <div className="space-y-1">
             {booking.items.map((item, idx) => (
               <div key={idx} className="flex justify-between text-sm">
-                <span className={`${isCustomEntry ? 'text-blue-900 dark:text-blue-100' : 'text-gray-900 dark:text-gray-100'}`}>
+                <span
+                  className={`${
+                    isCustomEntry
+                      ? "text-blue-900 dark:text-blue-100"
+                      : "text-gray-900 dark:text-gray-100"
+                  }`}
+                >
                   {item.quantity}x {item.product.name}
                 </span>
-                <span className={`${isCustomEntry ? 'text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'}`}>
+                <span
+                  className={`${
+                    isCustomEntry
+                      ? "text-blue-700 dark:text-blue-300"
+                      : "text-gray-600 dark:text-gray-400"
+                  }`}
+                >
                   ₹{item.pricePerDay}/day
                 </span>
               </div>
@@ -395,9 +529,15 @@ export function BookingsDataGrid() {
 
         {/* Total Amount */}
         <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-600">
-          <span className="font-medium text-green-600 dark:text-green-400 text-lg">
-            ₹{booking.totalAmount.toFixed(2)}
-          </span>
+          <div className="flex flex-col">
+            <span className="font-medium text-green-600 dark:text-green-400 text-lg">
+              ₹{booking.totalAmount.toFixed(2)}
+            </span>
+            <span className="text-xs text-red-500 dark:text-gray-400">
+              ₹
+              {(booking.totalAmount - (booking.advancePayment || 0)).toFixed(2)}
+            </span>
+          </div>
           <div className="flex items-center space-x-1">
             <button
               onClick={() => handleGenerateInvoice(booking)}
@@ -421,20 +561,15 @@ export function BookingsDataGrid() {
                 )}
               </button>
             )}
-            <EditBookingForm 
+            <EditBookingForm
+              bookingId={booking.originalBookingId || booking.id}
+              onBookingUpdated={fetchBookings}
+            />
+            <DeleteBookingButton
               booking={{
                 ...booking,
                 id: booking.originalBookingId || booking.id,
-                // Find original booking to get all items
-                items: originalBookings.find(b => b.id === (booking.originalBookingId || booking.id))?.items || booking.items
-              }} 
-              onBookingUpdated={fetchBookings}
-            />
-            <DeleteBookingButton 
-              booking={{
-                ...booking,
-                id: booking.originalBookingId || booking.id
-              }} 
+              }}
               onBookingDeleted={fetchBookings}
             />
           </div>
@@ -442,32 +577,24 @@ export function BookingsDataGrid() {
       </div>
     );
 
-    // Don't wrap completed bookings in swipe-to-delete
-    if (isCompleted) {
-      return cardContent;
-    }
-
-    // Wrap active bookings in SwipeToComplete for mark as completed functionality
-    return (
-      <SwipeToComplete
-        onComplete={() => handleMarkAsCompleted(bookingId)}
-        disabled={isUpdating}
-        className="mb-2"
-      >
-        {cardContent}
-      </SwipeToComplete>
-    );
+    // Return card content without swipe functionality
+    return cardContent;
   };
 
   const columns: Column<Booking>[] = [
     {
-      key: 'id',
-      header: 'Booking ID',
-      width: '5%',
+      key: "id",
+      header: "Booking ID",
+      width: "5%",
       render: (booking) => (
         <div className="flex items-center gap-2">
-          <code className="text-sm px-3 py-2 rounded font-mono" 
-                style={{ backgroundColor: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))' }}>
+          <code
+            className="text-sm px-3 py-2 rounded font-mono"
+            style={{
+              backgroundColor: "hsl(var(--muted))",
+              color: "hsl(var(--muted-foreground))",
+            }}
+          >
             {formatId(booking.originalBookingId || booking.id)}
           </code>
           {booking.isCustomTimingEntry && (
@@ -476,119 +603,177 @@ export function BookingsDataGrid() {
             </span>
           )}
         </div>
-      )
+      ),
     },
     {
-      key: 'items',
-      header: 'Products',
-      width: '25%',
+      key: "items",
+      header: "Products",
+      width: "25%",
       render: (booking) => {
         const isCustomEntry = booking.isCustomTimingEntry;
-        
+
         return (
-          <div className={`space-y-2 ${isCustomEntry ? 'p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-700' : ''}`}>
-            <div className={`font-medium text-sm mb-1`} 
-                 style={{ color: isCustomEntry ? 'hsl(var(--primary))' : 'hsl(var(--foreground))' }}>
-              {isCustomEntry ? 'Custom Timing' : 'Regular Items'} ({booking.items.length})
+          <div
+            className={`space-y-2 ${
+              isCustomEntry
+                ? "p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-700"
+                : ""
+            }`}
+          >
+            <div
+              className={`font-medium text-sm mb-1`}
+              style={{
+                color: isCustomEntry
+                  ? "hsl(var(--primary))"
+                  : "hsl(var(--foreground))",
+              }}
+            >
+              {isCustomEntry ? "Custom Timing" : "Regular Items"} (
+              {booking.items.length})
             </div>
             <div className="space-y-1">
               {booking.items.map((item, index) => (
                 <div key={index} className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <div className="text-sm" 
-                         style={{ color: isCustomEntry ? 'hsl(var(--primary))' : 'hsl(var(--foreground))' }}>
+                    <div
+                      className="text-sm"
+                      style={{
+                        color: isCustomEntry
+                          ? "hsl(var(--primary))"
+                          : "hsl(var(--foreground))",
+                      }}
+                    >
                       {item.quantity}x {item.product.name}
                     </div>
-                    <div className="text-xs" 
-                         style={{ color: isCustomEntry ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}>
+                    <div
+                      className="text-xs"
+                      style={{
+                        color: isCustomEntry
+                          ? "hsl(var(--primary))"
+                          : "hsl(var(--muted-foreground))",
+                      }}
+                    >
                       ₹{item.pricePerDay}/day
                     </div>
                   </div>
-                  {isCustomEntry && (item.itemStartDate || item.itemEndDate) && (
-                    <div className="text-xs text-blue-600 font-mono">
-                      {formatCustomTiming(item)}
-                    </div>
-                  )}
+                  {isCustomEntry &&
+                    (item.itemStartDate || item.itemEndDate) && (
+                      <div className="text-xs text-blue-600 font-mono">
+                        {formatCustomTiming(item)}
+                      </div>
+                    )}
                 </div>
               ))}
             </div>
           </div>
         );
-      }
+      },
     },
     {
-      key: 'customer',
-      header: 'Customer',
-      width: '10%',
+      key: "customer",
+      header: "Customer",
+      width: "10%",
       render: (booking) => (
         <div className="space-y-2">
           <div>
-            <div className="font-medium" style={{ color: 'hsl(var(--foreground))' }}>{booking.customer.name}</div>
-            <div className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>{booking.customer.phone1}</div>
+            <div
+              className="font-medium"
+              style={{ color: "hsl(var(--foreground))" }}
+            >
+              {booking.customer.name}
+            </div>
+            <div
+              className="text-sm"
+              style={{ color: "hsl(var(--muted-foreground))" }}
+            >
+              {booking.customer.phone1}
+            </div>
           </div>
         </div>
-      )
+      ),
     },
     {
-      key: 'dates',
-      header: 'Rental Period',
-      width: '15%',
+      key: "dates",
+      header: "Rental Period",
+      width: "15%",
       render: (booking) => (
         <div>
-          <div className="text-sm font-medium" style={{ color: 'hsl(var(--foreground))' }}>
-            {format(new Date(booking.startDate), 'dd MMM, yyyy')}
+          <div
+            className="text-sm font-medium"
+            style={{ color: "hsl(var(--foreground))" }}
+          >
+            {safeFormatDate(booking.startDate, "dd MMM, yyyy", isMounted)}
           </div>
-          <div className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
+          <div
+            className="text-xs"
+            style={{ color: "hsl(var(--muted-foreground))" }}
+          >
             {booking.startTime} - {booking.endTime}
           </div>
-          <div className="text-sm" style={{ color: 'hsl(var(--foreground))' }}>
-            to {format(new Date(booking.endDate), 'dd MMM, yyyy')}
+          <div className="text-sm" style={{ color: "hsl(var(--foreground))" }}>
+            to {safeFormatDate(booking.endDate, "dd MMM, yyyy", isMounted)}
           </div>
         </div>
-      )
+      ),
     },
     {
-      key: 'eventDate',
-      header: 'Event Date',
-      width: '10%',
+      key: "eventDate",
+      header: "Event Date",
+      width: "10%",
       render: (booking) => (
         <div>
           {booking.eventDate ? (
             <div className="text-sm font-medium text-blue-600">
-              {format(new Date(booking.eventDate), 'dd MMM, yyyy')}
+              {safeFormatDate(booking.eventDate, "dd MMM, yyyy", isMounted)}
             </div>
           ) : (
-            <div className="text-xs" style={{ color: 'hsl(var(--muted-foreground))' }}>
+            <div
+              className="text-xs"
+              style={{ color: "hsl(var(--muted-foreground))" }}
+            >
               Not set
             </div>
           )}
         </div>
-      )
+      ),
     },
     {
-      key: 'totalAmount',
-      header: 'Total Amount',
-      width: '8%',
-      render: (booking) => (
-        <span className="font-medium text-green-600">
-          ₹{booking.totalAmount.toFixed(2)}
-        </span>
-      )
+      key: "totalAmount",
+      header: "Total Amount",
+      width: "8%",
+      render: (booking) => {
+        const pendingAmount =
+          booking.totalAmount - (booking.advancePayment || 0);
+        return (
+          <div className="space-y-1">
+            <span className="font-medium text-green-600">
+              ₹{booking.totalAmount.toFixed(2)}
+            </span>
+            <div className="text-xs text-gray-500">
+              Pending: ₹{pendingAmount.toFixed(2)}
+            </div>
+          </div>
+        );
+      },
     },
     {
-      key: 'status',
-      header: 'Booking Status',
-      width: '8%',
+      key: "status",
+      header: "Booking Status",
+      width: "8%",
       render: (booking) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBookingStatusColor(booking.status)}`}>
+        <span
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBookingStatusColor(
+            booking.status
+          )}`}
+        >
           {booking.status}
         </span>
-      )
+      ),
     },
     {
-      key: 'actions',
-      header: 'Actions',
-      width: '12%',
+      key: "actions",
+      header: "Actions",
+      width: "12%",
       render: (booking) => (
         <div className="flex items-center space-x-1">
           <button
@@ -599,47 +784,54 @@ export function BookingsDataGrid() {
             <FileText className="h-4 w-4" />
           </button>
           {/* Mark as Completed button - only show for non-completed bookings */}
-          {booking.rowStatusCd !== 'C' && (
+          {booking.rowStatusCd !== "C" && (
             <button
-              onClick={() => handleMarkAsCompleted(booking.originalBookingId || booking.id)}
-              disabled={updatingStatusId === (booking.originalBookingId || booking.id)}
+              onClick={() =>
+                handleMarkAsCompleted(booking.originalBookingId || booking.id)
+              }
+              disabled={
+                updatingStatusId === (booking.originalBookingId || booking.id)
+              }
               className="p-1 text-green-600 hover:text-green-800 hover:bg-green-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title="Mark as Completed"
             >
-              {updatingStatusId === (booking.originalBookingId || booking.id) ? (
+              {updatingStatusId ===
+              (booking.originalBookingId || booking.id) ? (
                 <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
               ) : (
                 <CheckCircle className="h-4 w-4" />
               )}
             </button>
           )}
-          <EditBookingForm 
+          <EditBookingForm
+            bookingId={booking.originalBookingId || booking.id}
+            onBookingUpdated={fetchBookings}
+          />
+          <DeleteBookingButton
             booking={{
               ...booking,
               id: booking.originalBookingId || booking.id,
-              // Find original booking to get all items
-              items: originalBookings.find(b => b.id === (booking.originalBookingId || booking.id))?.items || booking.items
-            }} 
-            onBookingUpdated={fetchBookings}
-          />
-          <DeleteBookingButton 
-            booking={{
-              ...booking,
-              id: booking.originalBookingId || booking.id
-            }} 
+            }}
             onBookingDeleted={fetchBookings}
           />
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'hsl(var(--foreground))' }}>Bookings</h1>
-          <p style={{ color: 'hsl(var(--muted-foreground))' }}>Manage rental bookings and schedules</p>
+          <h1
+            className="text-2xl font-bold"
+            style={{ color: "hsl(var(--foreground))" }}
+          >
+            Bookings
+          </h1>
+          <p style={{ color: "hsl(var(--muted-foreground))" }}>
+            Manage rental bookings and schedules
+          </p>
         </div>
         <AddBookingForm onBookingAdded={fetchBookings} />
       </div>
@@ -651,24 +843,28 @@ export function BookingsDataGrid() {
             onClick={() => setShowCompletedBookings(!showCompletedBookings)}
             className={`px-3 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
               showCompletedBookings
-                ? 'bg-green-600 hover:bg-green-700 text-white'
-                : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+                ? "bg-green-600 hover:bg-green-700 text-white"
+                : "bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300"
             }`}
           >
             <CheckCircle size={16} />
             <span className="hidden sm:inline">
-              {showCompletedBookings ? 'Hide Completed Bookings' : 'Load Completed Bookings'}
+              {showCompletedBookings
+                ? "Hide Completed Bookings"
+                : "Load Completed Bookings"}
             </span>
             <span className="sm:hidden">
-              {showCompletedBookings ? 'Hide Completed' : 'Show Completed'}
+              {showCompletedBookings ? "Hide Completed" : "Show Completed"}
             </span>
           </button>
-          
+
           <div className="hidden sm:block text-sm text-gray-600 dark:text-gray-400">
-            Showing {showCompletedBookings ? 'Active & Completed' : 'Active Only'} bookings
+            Showing{" "}
+            {showCompletedBookings ? "Active & Completed" : "Active Only"}{" "}
+            bookings
           </div>
         </div>
-        
+
         <div className="text-sm text-gray-500 dark:text-gray-400">
           Total: {filteredBookings.length} bookings
         </div>

@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { format } from "date-fns"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -111,6 +112,22 @@ export function formatDate(date: string | Date): string {
     month: 'short',
     day: 'numeric'
   });
+}
+
+// Safe date formatting function to prevent hydration mismatches
+// This function should be used in client components that might cause SSR/CSR differences
+export function safeFormatDate(
+  dateString: string,
+  formatStr: string = "dd MMM, yyyy",
+  isMounted: boolean = true
+): string {
+  if (!isMounted) return dateString; // Return raw string during SSR
+  try {
+    return format(new Date(dateString), formatStr);
+  } catch (error) {
+    console.error("Date formatting error:", error);
+    return dateString;
+  }
 }
 
 export function formatCurrency(amount: number): string {
