@@ -113,7 +113,7 @@ export const generatePDFTemplate = ({ invoiceData }: PDFTemplateProps): string =
       <div style="margin-bottom: 24px;">
         <div style="background-color: #fef7e3; border-radius: 8px; padding: 20px; border: 1px solid #f59e0b;">
           <h3 style="font-weight: 600; color: #1f2937; margin: 0 0 12px 0; font-size: 16px;">📝 Booking Notes</h3>
-          <p style="color: #374151; font-size: 14px; line-height: 1.6; margin: 0;">${booking.notes}</p>
+          <p style="color: #374151; font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap;">${booking.notes}</p>
         </div>
       </div>` : ''}
 
