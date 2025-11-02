@@ -41,6 +41,7 @@ model Tenant {
   bookings  Booking[]
   customers Customer[]
   products  Product[]
+  configDetails ConfigDetails[]
 
   @@map("tenants")
 }
@@ -116,4 +117,34 @@ model BookingItem {
   product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("booking_items")
+}
+
+model ConfigMaster {
+  id          Int             @id @default(autoincrement())
+  configName  String          @unique
+  description String?
+  rowStatusCd String          @default("A") @db.VarChar(1)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @default(now()) @updatedAt
+  modifiedBy  String          @default("System")
+  
+  configDetails ConfigDetails[]
+
+  @@map("config_master")
+}
+
+model ConfigDetails {
+  id           Int          @id @default(autoincrement())
+  configId     Int
+  tenantId     Int
+  value        String?      @db.Text
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @default(now()) @updatedAt
+  modifiedBy   String       @default("System")
+  
+  configMaster ConfigMaster @relation(fields: [configId], references: [id], onDelete: Cascade)
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([configId, tenantId])
+  @@map("config_details")
 }

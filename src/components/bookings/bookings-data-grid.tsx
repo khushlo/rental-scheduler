@@ -158,7 +158,8 @@ export function BookingsDataGrid() {
             status: calculateBookingStatus(
               customStartDate,
               customEndDate,
-              booking.status === "cancelled"
+              booking.status === "cancelled",
+              booking.rowStatusCd
             ),
             // Add a flag to identify this as a custom timing entry
             isCustomTimingEntry: true,
@@ -181,7 +182,8 @@ export function BookingsDataGrid() {
           status: calculateBookingStatus(
             booking.startDate,
             booking.endDate,
-            booking.status === "cancelled"
+            booking.status === "cancelled",
+            booking.rowStatusCd
           ),
           // Add a flag to identify this as a regular entry
           isCustomTimingEntry: false,
@@ -867,7 +869,7 @@ export function BookingsDataGrid() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h1

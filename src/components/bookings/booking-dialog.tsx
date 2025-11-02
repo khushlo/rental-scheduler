@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Plus, X, RefreshCw } from "lucide-react";
+import { Plus, X, RefreshCw, FileText } from "lucide-react";
 import { CustomerSelection } from "./dialog/customer-selection";
 import { RentalPeriod } from "./dialog/rental-period";
 import { BookingItemComponent } from "./dialog/booking-item";
@@ -26,6 +26,14 @@ interface Product {
   quantity: number;
   rentPrice: number;
   status: boolean;
+}
+
+interface Configuration {
+  id: number;
+  configName: string;
+  description: string | null;
+  value: string | null;
+  hasValue: boolean;
 }
 
 interface BookingItem {
@@ -87,6 +95,7 @@ export function BookingDialog({
 
   // Products state
   const [products, setProducts] = useState<Product[]>([]);
+  const [configurations, setConfigurations] = useState<Configuration[]>([]);
   const [expandedNotes, setExpandedNotes] = useState(new Set<number>());
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
@@ -135,6 +144,7 @@ export function BookingDialog({
   useEffect(() => {
     if (isOpen) {
       fetchProducts();
+      fetchConfigurations();
 
       // Fetch booking details if in edit mode
       if (mode === "edit" && bookingId) {
@@ -202,6 +212,18 @@ export function BookingDialog({
       console.error("Error fetching products:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchConfigurations = async () => {
+    try {
+      const response = await fetch("/api/configurations");
+      if (response.ok) {
+        const data = await response.json();
+        setConfigurations(data);
+      }
+    } catch (error) {
+      console.error("Error fetching configurations:", error);
     }
   };
 
@@ -425,6 +447,26 @@ export function BookingDialog({
     setTimeout(() => setIsRefreshing(false), 1000);
   };
 
+  const addDefaultNotes = () => {
+    const bookingNotesConfig = configurations.find(
+      (config) => config.configName === "BookingNotes"
+    );
+
+    if (bookingNotesConfig && bookingNotesConfig.value) {
+      setFormData((prev) => {
+        const currentNotes = prev.notes || "";
+        const defaultNotes = bookingNotesConfig.value || "";
+
+        // Append default notes with proper spacing
+        const updatedNotes = currentNotes
+          ? `${currentNotes}\n${defaultNotes}`
+          : defaultNotes;
+
+        return { ...prev, notes: updatedNotes };
+      });
+    }
+  };
+
   const calculateTotal = () => {
     return formData.totalAmount === undefined || formData.totalAmount === 0
       ? formData.items.reduce((total, item) => total + item.subtotal, 0)
@@ -512,8 +554,10 @@ export function BookingDialog({
         const errorData = await response.json();
         throw new Error(errorData.error || `Failed to ${mode} booking`);
       }
-    } catch (error: any) {
-      setError(error.message || `Failed to ${mode} booking`);
+    } catch (error: unknown) {
+      setError(
+        error instanceof Error ? error.message : `Failed to ${mode} booking`
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -696,9 +740,21 @@ export function BookingDialog({
 
             {/* Notes */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Notes
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Notes
+                </label>
+                <button
+                  type="button"
+                  onClick={addDefaultNotes}
+                  disabled={isSubmitting}
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors disabled:opacity-50"
+                  title="Add default booking notes"
+                >
+                  <FileText size={12} />
+                  Add default notes
+                </button>
+              </div>
               <textarea
                 value={formData.notes}
                 onChange={(e) =>

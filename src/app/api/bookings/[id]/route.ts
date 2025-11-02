@@ -82,7 +82,7 @@ export async function PUT(
 
       // Filter for actual time-based overlaps and active/confirmed bookings
       const overlappingBookings = allOverlappingBookings.filter(booking => {
-        const status = calculateBookingStatus(booking.startDate, booking.endDate)
+        const status = calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd)
         if (status !== 'confirmed' && status !== 'active') {
           return false // Skip completed/cancelled bookings
         }
@@ -185,7 +185,7 @@ export async function PUT(
     // Add calculated status to response
     const bookingWithStatus = {
       ...booking,
-      status: calculateBookingStatus(booking.startDate, booking.endDate),
+      status: calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd),
       customer: {
         ...booking.customer,
         email: booking.customer.phone1 // Use phone1 as email placeholder for UI compatibility
@@ -286,7 +286,7 @@ export async function GET(
     // Add calculated status to response
     const bookingWithStatus = {
       ...booking,
-      status: calculateBookingStatus(booking.startDate, booking.endDate),
+      status: calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd),
       rowStatusCd: booking.rowStatusCd, // Include the new status field
       customer: {
         ...booking.customer,

@@ -98,7 +98,7 @@ export async function DELETE(request: NextRequest) {
     
     // Filter to only active bookings (confirmed or active status)
     const activeBookings = allBookings.filter(booking => {
-      const status = calculateBookingStatus(booking.startDate, booking.endDate)
+      const status = calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd)
       return status === 'confirmed' || status === 'active'
     })
     

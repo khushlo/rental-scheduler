@@ -20,7 +20,7 @@ export async function GET() {
     let confirmedBookings = 0
 
     allBookings.forEach(booking => {
-      const status = calculateBookingStatus(booking.startDate, booking.endDate)
+      const status = calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd)
       switch (status) {
         case 'active':
           activeBookings++

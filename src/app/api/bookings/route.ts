@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
     // Add calculated status to each booking
     const bookingsWithStatus = bookings.map(booking => ({
       ...booking,
-      status: calculateBookingStatus(booking.startDate, booking.endDate),
+      status: calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd),
       rowStatusCd: booking.rowStatusCd, // Include the new status field
       customer: {
         ...booking.customer,
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
 
       // Filter for actual time-based overlaps and active/confirmed bookings
       const overlappingBookings = allOverlappingBookings.filter(booking => {
-        const status = calculateBookingStatus(booking.startDate, booking.endDate)
+        const status = calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd)
         if (status !== 'confirmed' && status !== 'active') {
           return false // Skip completed/cancelled bookings
         }
@@ -248,7 +248,7 @@ export async function POST(request: NextRequest) {
     // Add calculated status to response
     const bookingWithStatus = {
       ...booking,
-      status: calculateBookingStatus(booking.startDate, booking.endDate),
+      status: calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd),
       rowStatusCd: booking.rowStatusCd, // Include the new status field
       customer: {
         ...booking.customer,

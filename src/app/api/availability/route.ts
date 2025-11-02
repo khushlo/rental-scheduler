@@ -180,7 +180,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate booked quantity from non-completed/non-cancelled bookings
     const bookedQuantity = overlappingBookings.reduce((total, booking) => {
-      const status = calculateBookingStatus(booking.startDate, booking.endDate)
+      const status = calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd)
       // Only count bookings that are confirmed or active
       if (status === 'confirmed' || status === 'active') {
         return total + (booking.items as any[]).reduce((itemTotal: number, bookingItem: any) => {
@@ -273,7 +273,7 @@ export async function GET(request: NextRequest) {
       })
 
       const delayedBookedQuantity = delayedOverlappingBookings.reduce((total, booking) => {
-        const status = calculateBookingStatus(booking.startDate, booking.endDate)
+        const status = calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd)
         if (status === 'confirmed' || status === 'active') {
           return total + (booking.items as any[]).reduce((itemTotal: number, bookingItem: any) => {
             return itemTotal + bookingItem.quantity
@@ -307,7 +307,7 @@ export async function GET(request: NextRequest) {
       },
       conflictingBookings: (delayApplied ? delayedOverlappingBookings : overlappingBookings)
         .filter(booking => {
-          const status = calculateBookingStatus(booking.startDate, booking.endDate)
+          const status = calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd)
           return status === 'confirmed' || status === 'active'
         })
         .map(booking => ({

@@ -26,9 +26,13 @@ export type BookingStatus = 'confirmed' | 'active' | 'completed' | 'cancelled';
 export function calculateBookingStatus(
   startDate: string | Date,
   endDate: string | Date,
-  cancelled?: boolean
+  cancelled?: boolean,
+  rowStatusCd?: string
 ): BookingStatus {
   if (cancelled) return 'cancelled';
+  
+  // If rowStatusCd is 'C' (Completed), return completed regardless of date logic
+  if (rowStatusCd === 'C') return 'completed';
   
   const now = new Date();
   const start = typeof startDate === 'string' ? new Date(startDate) : startDate;
@@ -44,7 +48,7 @@ export function calculateBookingStatus(
   // IF current date - 4 days <= start date <= current date + 5 days Then 'Active'
   if (daysDiff >= -4 && daysDiff <= 5) return 'active';
   
-  // IF current date - 4 days > start date then 'Completed'
+  // IF current date - 4 days > start date then 'Completed' OR if rowStatusCd = 'C'
   if (daysDiff < -4) return 'completed';
   
   return 'completed'; // fallback

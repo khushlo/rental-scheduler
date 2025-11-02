@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { useState } from "react";
+import { createPortal } from "react-dom";
+import { X } from "lucide-react";
 
 interface AddProductFormProps {
   isOpen: boolean;
@@ -10,30 +10,39 @@ interface AddProductFormProps {
   onProductAdded: () => void;
 }
 
-export function AddProductForm({ isOpen, onClose, onProductAdded }: AddProductFormProps) {
+export function AddProductForm({
+  isOpen,
+  onClose,
+  onProductAdded,
+}: AddProductFormProps) {
   const [formData, setFormData] = useState({
-    name: '',
+    name: "",
     quantity: 1,
     rentPrice: 0,
-    status: true
+    delayInHours: 0,
+    status: true,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate form
     if (!formData.name.trim()) {
-      setError('Product name is required');
+      setError("Product name is required");
       return;
     }
     if (formData.quantity < 0) {
-      setError('Quantity must be non-negative');
+      setError("Quantity must be non-negative");
       return;
     }
     if (formData.rentPrice < 0) {
-      setError('Rent price must be non-negative');
+      setError("Rent price must be non-negative");
+      return;
+    }
+    if (formData.delayInHours < 0) {
+      setError("Delay hours must be non-negative");
       return;
     }
 
@@ -41,30 +50,31 @@ export function AddProductForm({ isOpen, onClose, onProductAdded }: AddProductFo
     setError(null);
 
     try {
-      const response = await fetch('/api/products', {
-        method: 'POST',
+      const response = await fetch("/api/products", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       });
 
       if (response.ok) {
         setFormData({
-          name: '',
+          name: "",
           quantity: 1,
           rentPrice: 0,
+          delayInHours: 0,
           status: true,
         });
         onProductAdded();
         onClose();
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to create product');
+        setError(errorData.error || "Failed to create product");
       }
     } catch (error) {
-      console.error('Error creating product:', error);
-      setError('Failed to create product. Please try again.');
+      console.error("Error creating product:", error);
+      setError("Failed to create product. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -72,18 +82,30 @@ export function AddProductForm({ isOpen, onClose, onProductAdded }: AddProductFo
 
   const handleClose = () => {
     setError(null);
-    setFormData({ name: '', quantity: 1, rentPrice: 0, status: true });
+    setFormData({
+      name: "",
+      quantity: 1,
+      rentPrice: 0,
+      delayInHours: 0,
+      status: true,
+    });
     onClose();
   };
 
   if (!isOpen) return null;
 
   // Don't render during SSR
-  if (typeof document === 'undefined') return null;
+  if (typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-600">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             Add New Product
@@ -101,7 +123,7 @@ export function AddProductForm({ isOpen, onClose, onProductAdded }: AddProductFo
               {error}
             </div>
           )}
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Product Name <span className="text-red-500">*</span>
@@ -109,7 +131,9 @@ export function AddProductForm({ isOpen, onClose, onProductAdded }: AddProductFo
             <input
               type="text"
               value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, name: e.target.value }))
+              }
               disabled={isSubmitting}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
               placeholder="Enter product name"
@@ -123,8 +147,18 @@ export function AddProductForm({ isOpen, onClose, onProductAdded }: AddProductFo
             <input
               type="number"
               min="0"
-              value={formData.quantity}
-              onChange={(e) => setFormData(prev => ({ ...prev, quantity: parseInt(e.target.value) || 0 }))}
+              value={formData.quantity || ""}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === "") {
+                  setFormData((prev) => ({ ...prev, quantity: 0 }));
+                } else {
+                  const numValue = parseInt(value, 10);
+                  if (!isNaN(numValue) && numValue >= 0) {
+                    setFormData((prev) => ({ ...prev, quantity: numValue }));
+                  }
+                }
+              }}
               disabled={isSubmitting}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
             />
@@ -138,10 +172,48 @@ export function AddProductForm({ isOpen, onClose, onProductAdded }: AddProductFo
               type="number"
               min="0"
               step="0.01"
-              value={formData.rentPrice}
-              onChange={(e) => setFormData(prev => ({ ...prev, rentPrice: parseFloat(e.target.value) || 0 }))}
+              value={formData.rentPrice || ""}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === "") {
+                  setFormData((prev) => ({ ...prev, rentPrice: 0 }));
+                } else {
+                  const numValue = parseFloat(value);
+                  if (!isNaN(numValue) && numValue >= 0) {
+                    setFormData((prev) => ({ ...prev, rentPrice: numValue }));
+                  }
+                }
+              }}
               disabled={isSubmitting}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Delay Hours
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={formData.delayInHours || ""}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === "") {
+                  setFormData((prev) => ({ ...prev, delayInHours: 0 }));
+                } else {
+                  const numValue = parseInt(value, 10);
+                  if (!isNaN(numValue) && numValue >= 0) {
+                    setFormData((prev) => ({
+                      ...prev,
+                      delayInHours: numValue,
+                    }));
+                  }
+                }
+              }}
+              disabled={isSubmitting}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
+              placeholder="Hours to wait before next booking (optional)"
             />
           </div>
 
@@ -150,11 +222,16 @@ export function AddProductForm({ isOpen, onClose, onProductAdded }: AddProductFo
               type="checkbox"
               id="productStatus"
               checked={formData.status}
-              onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.checked }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, status: e.target.checked }))
+              }
               disabled={isSubmitting}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
             />
-            <label htmlFor="productStatus" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+            <label
+              htmlFor="productStatus"
+              className="ml-2 block text-sm text-gray-700 dark:text-gray-300"
+            >
               Active
             </label>
           </div>
@@ -179,7 +256,7 @@ export function AddProductForm({ isOpen, onClose, onProductAdded }: AddProductFo
                   Creating...
                 </>
               ) : (
-                'Create Product'
+                "Create Product"
               )}
             </button>
           </div>
