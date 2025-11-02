@@ -2,6 +2,139 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { calculateBookingStatus } from '@/lib/utils'
 
+interface SweepEvent {
+  time: Date
+  change: number // +quantity for start, -quantity for end
+  type: 'start' | 'end'
+  bookingId: number
+}
+
+interface AvailabilityResult {
+  available: boolean
+  maxUsageDuringPeriod: number
+  availableQuantity: number
+  peakUsage: number
+}
+
+/**
+ * Enhanced Sweep Line Algorithm for conflict detection with detailed availability info
+ * Handles tie-breaking: when events happen at the same time, END events are processed first
+ */
+function checkAvailabilityUsingSweepLine(
+  overlappingBookings: any[],
+  requestStart: Date,
+  requestEnd: Date,
+  requestedQuantity: number,
+  totalQuantity: number
+): AvailabilityResult {
+  const events: SweepEvent[] = []
+
+  // Add existing booking events (only confirmed/active bookings)
+  overlappingBookings.forEach(booking => {
+    const status = calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd)
+    if (status === 'confirmed' || status === 'active') {
+      const bookingQuantity = booking.items.reduce((sum: number, item: any) => sum + item.quantity, 0)
+      
+      // Create start and end times for this booking
+      const bookingStart = new Date(booking.startDate)
+      const [startHours, startMinutes] = booking.startTime.split(':').map(Number)
+      bookingStart.setHours(startHours, startMinutes, 0, 0)
+      
+      const bookingEnd = new Date(booking.endDate)
+      const [endHours, endMinutes] = booking.endTime.split(':').map(Number)
+      bookingEnd.setHours(endHours, endMinutes, 0, 0)
+      
+      events.push({
+        time: bookingStart,
+        change: bookingQuantity,
+        type: 'start',
+        bookingId: booking.id
+      })
+      
+      events.push({
+        time: bookingEnd,
+        change: -bookingQuantity,
+        type: 'end',
+        bookingId: booking.id
+      })
+    }
+  })
+
+  // Sort events with tie-breaker rule (without adding new booking yet)
+  events.sort((a, b) => {
+    const timeDiff = a.time.getTime() - b.time.getTime()
+    if (timeDiff !== 0) return timeDiff
+    
+    // Tie-breaker: negative changes (end events) come before positive changes (start events)
+    return a.change - b.change
+  })
+
+  // Calculate usage at the start of the requested period (without the new booking)
+  let currentUsage = 0
+  let maxUsageDuringPeriod = 0
+  let usageAtRequestStart = 0
+  
+  for (const event of events) {
+    currentUsage += event.change
+    
+    // Track usage exactly at the start time of the request
+    if (event.time <= requestStart) {
+      usageAtRequestStart = currentUsage
+    }
+    
+    // Also track maximum usage during the requested time period for existing logic
+    if (event.time >= requestStart && event.time < requestEnd) {
+      maxUsageDuringPeriod = Math.max(maxUsageDuringPeriod, currentUsage)
+    }
+  }
+
+  // Now add the new booking events and check for conflicts
+  events.push({
+    time: requestStart,
+    change: requestedQuantity,
+    type: 'start',
+    bookingId: -1
+  })
+  
+  events.push({
+    time: requestEnd,
+    change: -requestedQuantity,
+    type: 'end',
+    bookingId: -1
+  })
+
+  // Re-sort with new booking events
+  events.sort((a, b) => {
+    const timeDiff = a.time.getTime() - b.time.getTime()
+    if (timeDiff !== 0) return timeDiff
+    return a.change - b.change
+  })
+
+  // Sweep through events and track peak usage
+  currentUsage = 0
+  let peakUsage = 0
+  let isAvailable = true
+  
+  for (const event of events) {
+    currentUsage += event.change
+    peakUsage = Math.max(peakUsage, currentUsage)
+    
+    // If usage exceeds total quantity at any point, there's a conflict
+    if (currentUsage > totalQuantity) {
+      isAvailable = false
+    }
+  }
+
+  const availableQuantity = totalQuantity - usageAtRequestStart
+
+  return {
+    available: isAvailable,
+    maxUsageDuringPeriod,
+    availableQuantity,
+    peakUsage
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -178,7 +311,19 @@ export async function GET(request: NextRequest) {
       });
     })
 
-    // Calculate booked quantity from non-completed/non-cancelled bookings
+    // Use Sweep Line Algorithm for accurate conflict detection
+    const sweepResult = checkAvailabilityUsingSweepLine(
+      overlappingBookings,
+      requestStartDateTime,
+      requestEndDateTime,
+      requestedQuantity,
+      product.quantity
+    )
+
+    const isAvailable = sweepResult.available
+    const accurateAvailableQuantity = sweepResult.availableQuantity
+
+    // Calculate available quantity for display purposes
     const bookedQuantity = overlappingBookings.reduce((total, booking) => {
       const status = calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd)
       // Only count bookings that are confirmed or active
@@ -191,7 +336,6 @@ export async function GET(request: NextRequest) {
     }, 0)
 
     const availableQuantity = product.quantity - bookedQuantity
-    const isAvailable = availableQuantity >= requestedQuantity
 
     // Apply delay logic - check if product has delay requirements
     let finalAvailability = isAvailable
@@ -291,9 +435,9 @@ export async function GET(request: NextRequest) {
       available: finalAvailability,
       product,
       requestedQuantity,
-      availableQuantity: delayApplied ? availabilityWithDelay : availableQuantity,
+      availableQuantity: delayApplied ? availabilityWithDelay : accurateAvailableQuantity,
       totalquantity: product.quantity,
-      bookedQuantity: delayApplied ? (product.quantity - availabilityWithDelay) : bookedQuantity,
+      bookedQuantity: delayApplied ? (product.quantity - availabilityWithDelay) : (product.quantity - accurateAvailableQuantity),
       delayApplied,
       delayHours: delayApplied ? (product as any).delayInHours : 0,
       timeAware: !!(startTime && endTime),
@@ -321,7 +465,7 @@ export async function GET(request: NextRequest) {
           quantity: (booking.items as any[]).reduce((sum: number, item: any) => sum + item.quantity, 0),
           status: calculateBookingStatus(booking.startDate, booking.endDate)
         })),
-      reason: !finalAvailability ? `Only ${delayApplied ? availabilityWithDelay : availableQuantity} units available${delayApplied ? ' (with ' + (product as any).delayInHours + 'h delay buffer)' : ''}, but ${requestedQuantity} requested` : undefined
+      reason: !finalAvailability ? `Only ${delayApplied ? availabilityWithDelay : accurateAvailableQuantity} units available${delayApplied ? ' (with ' + (product as any).delayInHours + 'h delay buffer)' : ''}, but ${requestedQuantity} requested` : undefined
     })
   } catch (error) {
     console.error('Availability check error:', error)
@@ -404,35 +548,17 @@ export async function POST(request: NextRequest) {
             }
           })
 
-          // Filter for actual time-based overlaps if times are provided (without delay initially)
-          const filteredBookings = overlappingBookings.filter(booking => {
-            // If no times provided for the request, use date-only logic (backward compatibility)
-            if (!startTime || !endTime) {
-              const requestStart = new Date(startDate);
-              const requestEnd = new Date(endDate);
-              let bookingStart = new Date(booking.startDate);
-              let bookingEnd = new Date(booking.endDate);
-              
-              // Don't apply delay initially - will be handled in availability calculation
-              return requestStart <= bookingEnd && bookingStart <= requestEnd;
-            }
+          // Use Sweep Line Algorithm for accurate conflict detection
+          const isAvailable = checkAvailabilityUsingSweepLine(
+            overlappingBookings,
+            requestStartDateTime,
+            requestEndDateTime,
+            quantity,
+            product.quantity
+          )
 
-            // Create DateTime objects for existing booking
-            const bookingStart = new Date(booking.startDate)
-            const [bookingStartHours, bookingStartMinutes] = booking.startTime.split(':').map(Number)
-            bookingStart.setHours(bookingStartHours, bookingStartMinutes, 0, 0)
-
-            let bookingEnd = new Date(booking.endDate)
-            const [bookingEndHours, bookingEndMinutes] = booking.endTime.split(':').map(Number)
-            bookingEnd.setHours(bookingEndHours, bookingEndMinutes, 0, 0)
-
-            // Don't apply delay initially - will be handled in availability calculation
-
-            // Check for time overlap
-            return requestStartDateTime < bookingEnd && bookingStart < requestEndDateTime
-          })
-
-          const bookedQuantity = filteredBookings.reduce((total, booking) => {
+          // Calculate available quantity for display purposes
+          const bookedQuantity = overlappingBookings.reduce((total, booking) => {
             const status = calculateBookingStatus(booking.startDate, booking.endDate)
             // Only count bookings that are confirmed or active
             if (status === 'confirmed' || status === 'active') {
@@ -444,7 +570,6 @@ export async function POST(request: NextRequest) {
           }, 0)
 
           const availableQuantity = product.quantity - bookedQuantity
-          const isAvailable = availableQuantity >= quantity
 
           // Apply delay logic - for products with delay, check conflicts with buffer time on BOTH sides
           let finalAvailability = isAvailable
@@ -516,7 +641,12 @@ export async function POST(request: NextRequest) {
             }, 0)
 
             availabilityWithDelay = product.quantity - delayedBookedQuantity
-            finalAvailability = availabilityWithDelay >= quantity
+            finalAvailability = {
+              available: availabilityWithDelay >= quantity,
+              maxUsageDuringPeriod: delayedBookedQuantity,
+              availableQuantity: availabilityWithDelay,
+              peakUsage: delayedBookedQuantity
+            }
             delayApplied = true
           }
 

@@ -1,6 +1,7 @@
 import React from "react";
 import { InvoiceData, BookingItem } from "./types";
 import { formatTimeTo12Hour, generateHTMLStatusClass } from "./utils";
+import { formatDateForInvoice } from "@/lib/date-utils";
 
 interface InvoiceHTMLComponentProps {
   invoiceData: InvoiceData;
@@ -88,16 +89,14 @@ export const InvoiceHTMLComponent: React.FC<InvoiceHTMLComponentProps> = ({
             <div className="text-gray-600 text-sm sm:text-base">
               From{" "}
               {booking.startDate
-                ? new Date(booking.startDate).toLocaleDateString("en-IN")
+                ? formatDateForInvoice(booking.startDate)
                 : "N/A"}{" "}
               at{" "}
               <span className="bg-blue-600 text-white px-2 py-1 rounded-md font-semibold">
                 {formatTimeTo12Hour(booking.startTime)}
               </span>{" "}
               to{" "}
-              {booking.endDate
-                ? new Date(booking.endDate).toLocaleDateString("en-IN")
-                : "N/A"}{" "}
+              {booking.endDate ? formatDateForInvoice(booking.endDate) : "N/A"}{" "}
               at{" "}
               <span className="bg-blue-600 text-white px-2 py-1 rounded-md font-semibold">
                 {formatTimeTo12Hour(booking.endTime)}
@@ -110,7 +109,7 @@ export const InvoiceHTMLComponent: React.FC<InvoiceHTMLComponentProps> = ({
                 Event Date:
               </span>
               <div className="text-gray-600 text-sm sm:text-base">
-                {new Date(booking.eventDate).toLocaleDateString("en-IN")}
+                {formatDateForInvoice(booking.eventDate)}
               </div>
             </div>
           )}
@@ -183,12 +182,9 @@ export const InvoiceHTMLComponent: React.FC<InvoiceHTMLComponentProps> = ({
                         item.itemEndTime && (
                           <div className="text-[10px] text-white mt-1 font-semibold">
                             <span className="bg-blue-600 px-2 py-1 rounded-md">
-                              Custom:{" "}
-                              {new Date(
-                                item.itemStartDate
-                              ).toLocaleDateString()}{" "}
+                              Custom: {formatDateForInvoice(item.itemStartDate)}{" "}
                               {formatTimeTo12Hour(item.itemStartTime)} to{" "}
-                              {new Date(item.itemEndDate).toLocaleDateString()}{" "}
+                              {formatDateForInvoice(item.itemEndDate)}{" "}
                               {formatTimeTo12Hour(item.itemEndTime)}
                             </span>
                           </div>

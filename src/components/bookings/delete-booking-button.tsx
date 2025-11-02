@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Trash2, X } from 'lucide-react';
+import { useState } from "react";
+import { Trash2, X } from "lucide-react";
 
 interface Customer {
   id: number;
@@ -30,17 +30,22 @@ interface Booking {
   totalAmount: number;
   status: string;
   notes?: string;
-  rowStatusCd?: 'A' | 'C' | 'D' | 'I' | 'O'; // Row Status Code
+  rowStatusCd?: "A" | "C" | "D" | "I" | "O"; // Row Status Code
   customer: Customer;
   items: BookingItem[];
 }
+
+import { formatDateForDisplay } from "@/lib/date-utils";
 
 interface DeleteBookingButtonProps {
   booking: Booking;
   onBookingDeleted: () => void;
 }
 
-export function DeleteBookingButton({ booking, onBookingDeleted }: DeleteBookingButtonProps) {
+export function DeleteBookingButton({
+  booking,
+  onBookingDeleted,
+}: DeleteBookingButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,19 +53,19 @@ export function DeleteBookingButton({ booking, onBookingDeleted }: DeleteBooking
   const performDelete = async () => {
     try {
       const response = await fetch(`/api/bookings/${booking.id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete booking');
+        throw new Error(data.error || "Failed to delete booking");
       }
 
       return true;
     } catch (error: any) {
-      console.error('Error deleting booking:', error);
-      setError(error.message || 'Failed to delete booking');
+      console.error("Error deleting booking:", error);
+      setError(error.message || "Failed to delete booking");
       return false;
     }
   };
@@ -70,7 +75,7 @@ export function DeleteBookingButton({ booking, onBookingDeleted }: DeleteBooking
     setError(null);
 
     const deleteSuccess = await performDelete();
-    
+
     if (deleteSuccess) {
       // Booking was successfully deleted
       setIsOpen(false);
@@ -93,21 +98,21 @@ export function DeleteBookingButton({ booking, onBookingDeleted }: DeleteBooking
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString();
+    return formatDateForDisplay(dateStr);
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'CONFIRMED':
-        return 'bg-blue-100 text-blue-800';
-      case 'ACTIVE':
-        return 'bg-green-100 text-green-800';
-      case 'COMPLETED':
-        return 'bg-gray-100 text-gray-800';
-      case 'CANCELLED':
-        return 'bg-red-100 text-red-800';
+      case "CONFIRMED":
+        return "bg-blue-100 text-blue-800";
+      case "ACTIVE":
+        return "bg-green-100 text-green-800";
+      case "COMPLETED":
+        return "bg-gray-100 text-gray-800";
+      case "CANCELLED":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -128,7 +133,10 @@ export function DeleteBookingButton({ booking, onBookingDeleted }: DeleteBooking
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
-                  <Trash2 size={20} className="text-red-600 dark:text-red-400" />
+                  <Trash2
+                    size={20}
+                    className="text-red-600 dark:text-red-400"
+                  />
                 </div>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                   Delete Booking
@@ -152,7 +160,8 @@ export function DeleteBookingButton({ booking, onBookingDeleted }: DeleteBooking
 
               <div className="mb-4">
                 <p className="text-gray-700 dark:text-gray-300 mb-4">
-                  Are you sure you want to delete this booking? This action cannot be undone.
+                  Are you sure you want to delete this booking? This action
+                  cannot be undone.
                 </p>
               </div>
 
@@ -161,41 +170,75 @@ export function DeleteBookingButton({ booking, onBookingDeleted }: DeleteBooking
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <div className="text-sm">
-                      <span className="font-medium text-gray-900 dark:text-gray-100">Booking ID:</span>
-                      <span className="ml-2 text-gray-700 dark:text-gray-300">#{booking.id}</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        Booking ID:
+                      </span>
+                      <span className="ml-2 text-gray-700 dark:text-gray-300">
+                        #{booking.id}
+                      </span>
                     </div>
                     <div className="text-sm">
-                      <span className="font-medium text-gray-900 dark:text-gray-100">Customer:</span>
-                      <span className="ml-2 text-gray-700 dark:text-gray-300">{booking.customer.name}</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        Customer:
+                      </span>
+                      <span className="ml-2 text-gray-700 dark:text-gray-300">
+                        {booking.customer.name}
+                      </span>
                     </div>
                     <div className="text-sm">
-                      <span className="font-medium text-gray-900 dark:text-gray-100">Email:</span>
-                      <span className="ml-2 text-gray-700 dark:text-gray-300">{booking.customer.email}</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        Email:
+                      </span>
+                      <span className="ml-2 text-gray-700 dark:text-gray-300">
+                        {booking.customer.email}
+                      </span>
                     </div>
                     <div className="text-sm">
-                      <span className="font-medium text-gray-900 dark:text-gray-100">Status:</span>
-                      <span className={`ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        Status:
+                      </span>
+                      <span
+                        className={`ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                          booking.status
+                        )}`}
+                      >
                         {booking.status}
                       </span>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <div className="text-sm">
-                      <span className="font-medium text-gray-900 dark:text-gray-100">Start Date:</span>
-                      <span className="ml-2 text-gray-700 dark:text-gray-300">{formatDate(booking.startDate)}</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        Start Date:
+                      </span>
+                      <span className="ml-2 text-gray-700 dark:text-gray-300">
+                        {formatDate(booking.startDate)}
+                      </span>
                     </div>
                     <div className="text-sm">
-                      <span className="font-medium text-gray-900 dark:text-gray-100">End Date:</span>
-                      <span className="ml-2 text-gray-700 dark:text-gray-300">{formatDate(booking.endDate)}</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        End Date:
+                      </span>
+                      <span className="ml-2 text-gray-700 dark:text-gray-300">
+                        {formatDate(booking.endDate)}
+                      </span>
                     </div>
                     <div className="text-sm">
-                      <span className="font-medium text-gray-900 dark:text-gray-100">Time:</span>
-                      <span className="ml-2 text-gray-700 dark:text-gray-300">{booking.startTime} - {booking.endTime}</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        Time:
+                      </span>
+                      <span className="ml-2 text-gray-700 dark:text-gray-300">
+                        {booking.startTime} - {booking.endTime}
+                      </span>
                     </div>
                     <div className="text-sm">
-                      <span className="font-medium text-gray-900 dark:text-gray-100">Total Amount:</span>
-                      <span className="ml-2 text-gray-700 dark:text-gray-300 font-semibold">₹{booking.totalAmount.toFixed(2)}</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        Total Amount:
+                      </span>
+                      <span className="ml-2 text-gray-700 dark:text-gray-300 font-semibold">
+                        ₹{booking.totalAmount.toFixed(2)}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -203,10 +246,15 @@ export function DeleteBookingButton({ booking, onBookingDeleted }: DeleteBooking
                 {/* Booking Items */}
                 {booking.items.length > 0 && (
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-                    <div className="font-medium text-gray-900 dark:text-gray-100 mb-2">Rental Items:</div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+                      Rental Items:
+                    </div>
                     <div className="space-y-2">
                       {booking.items.map((item, index) => (
-                        <div key={index} className="flex justify-between items-center text-sm">
+                        <div
+                          key={index}
+                          className="flex justify-between items-center text-sm"
+                        >
                           <div className="text-gray-700 dark:text-gray-300">
                             {item.quantity}x {item.product.name}
                           </div>
@@ -221,8 +269,12 @@ export function DeleteBookingButton({ booking, onBookingDeleted }: DeleteBooking
 
                 {booking.notes && (
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-                    <div className="font-medium text-gray-900 dark:text-gray-100 mb-1">Notes:</div>
-                    <div className="text-sm text-gray-700 dark:text-gray-300">{booking.notes}</div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100 mb-1">
+                      Notes:
+                    </div>
+                    <div className="text-sm text-gray-700 dark:text-gray-300">
+                      {booking.notes}
+                    </div>
                   </div>
                 )}
               </div>
@@ -241,7 +293,7 @@ export function DeleteBookingButton({ booking, onBookingDeleted }: DeleteBooking
                 disabled={isSubmitting}
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'Deleting...' : 'Delete Booking'}
+                {isSubmitting ? "Deleting..." : "Delete Booking"}
               </button>
             </div>
           </div>

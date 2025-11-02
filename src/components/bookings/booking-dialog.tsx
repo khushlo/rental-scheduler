@@ -103,8 +103,8 @@ export function BookingDialog({
 
   // Form data
   const [formData, setFormData] = useState({
-    startDate: new Date().toISOString().split("T")[0],
-    endDate: new Date().toISOString().split("T")[0],
+    startDate: "", // Initialize empty to prevent hydration mismatch
+    endDate: "", // Initialize empty to prevent hydration mismatch
     startTime: "09:00",
     endTime: "17:00",
     eventDate: "",
@@ -115,6 +115,16 @@ export function BookingDialog({
     rowStatusCd: "A" as "A" | "C" | "D" | "I" | "O",
     items: [] as BookingItem[],
   });
+
+  // Initialize on client side to prevent hydration mismatch
+  useEffect(() => {
+    const today = new Date().toISOString().split("T")[0];
+    setFormData((prev) => ({
+      ...prev,
+      startDate: today,
+      endDate: today,
+    }));
+  }, []);
 
   // Custom hooks
   const {
@@ -238,12 +248,21 @@ export function BookingDialog({
         setBooking(bookingData);
 
         // Update form data with fetched booking details
+        // Convert date objects to YYYY-MM-DD format for HTML date inputs
+        const formatDateForInput = (dateString: string | Date) => {
+          if (!dateString) return "";
+          const date = new Date(dateString);
+          return date.toISOString().split("T")[0];
+        };
+
         setFormData({
-          startDate: bookingData.startDate,
-          endDate: bookingData.endDate,
+          startDate: formatDateForInput(bookingData.startDate),
+          endDate: formatDateForInput(bookingData.endDate),
           startTime: bookingData.startTime,
           endTime: bookingData.endTime,
-          eventDate: bookingData.eventDate || "",
+          eventDate: bookingData.eventDate
+            ? formatDateForInput(bookingData.eventDate)
+            : "",
           totalAmount: bookingData.totalAmount,
           advancePayment: bookingData.advancePayment || 0,
           notes: bookingData.notes || "",

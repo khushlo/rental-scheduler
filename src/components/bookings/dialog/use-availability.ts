@@ -8,6 +8,8 @@ interface AvailabilityError {
     id: number;
     customer: string;
     quantity: number;
+    startDate: string;
+    endDate: string;
     startTime?: string;
     endTime?: string;
   }[];

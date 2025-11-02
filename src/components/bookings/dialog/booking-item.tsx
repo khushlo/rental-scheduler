@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
-import { X, Package, MessageSquare, Clock } from 'lucide-react';
+import { useRef } from "react";
+import { X, Package, MessageSquare, Clock } from "lucide-react";
 
 interface Product {
   id: number;
@@ -30,6 +30,8 @@ interface AvailabilityError {
     id: number;
     customer: string;
     quantity: number;
+    startDate: string;
+    endDate: string;
     startTime?: string;
     endTime?: string;
   }[];
@@ -72,7 +74,7 @@ export function BookingItemComponent({
   onClearProduct,
   onToggleNotes,
   onToggleCustomTiming,
-  onShowAddProduct
+  onShowAddProduct,
 }: BookingItemComponentProps) {
   const productDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -87,42 +89,42 @@ export function BookingItemComponent({
             Product <span className="text-red-500">*</span>
           </label>
           <div className="flex items-center gap-2">
-            <div 
-              className="flex-1 relative"
-              ref={productDropdownRef}
-            >
+            <div className="flex-1 relative" ref={productDropdownRef}>
               <input
                 type="text"
-                value={productSearchTerm || ''}
+                value={productSearchTerm || ""}
                 onChange={(e) => onProductSearch(e.target.value)}
                 placeholder="Search for a product..."
                 disabled={isSubmitting}
                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-gray-100 disabled:opacity-50"
               />
-              
+
               {/* Product Search Results Dropdown */}
-              {showProductDropdown && productSuggestions && productSuggestions.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                  {productSuggestions.map((product) => (
-                    <button
-                      key={product.id}
-                      type="button"
-                      onClick={() => onProductSelect(product)}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-600 focus:bg-gray-100 dark:focus:bg-gray-600 focus:outline-none first:rounded-t-lg last:rounded-b-lg block"
-                    >
-                      <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
-                        {product.name}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        ₹{product.rentPrice}/day • Stock: {product.quantity}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              
+              {showProductDropdown &&
+                productSuggestions &&
+                productSuggestions.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {productSuggestions.map((product) => (
+                      <button
+                        key={product.id}
+                        type="button"
+                        onClick={() => onProductSelect(product)}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-600 focus:bg-gray-100 dark:focus:bg-gray-600 focus:outline-none first:rounded-t-lg last:rounded-b-lg block"
+                      >
+                        <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                          {product.name}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          ₹{product.rentPrice}/day • Stock: {product.quantity}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
               {/* Clear Product Selection Button */}
-              {(item.productId > 0 || (productSearchTerm && productSearchTerm.length > 0)) && (
+              {(item.productId > 0 ||
+                (productSearchTerm && productSearchTerm.length > 0)) && (
                 <button
                   type="button"
                   onClick={onClearProduct}
@@ -143,14 +145,22 @@ export function BookingItemComponent({
             </button>
           </div>
         </div>
-        
+
         {/* Availability Error Display */}
         {availabilityError && (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3">
             <div className="flex items-start">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                <svg
+                  className="h-5 w-5 text-red-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </div>
               <div className="ml-3">
@@ -163,17 +173,44 @@ export function BookingItemComponent({
                     <div className="mt-2">
                       <p className="font-medium">Conflicting with bookings:</p>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {availabilityError.conflictingBookings.map((booking, bookingIndex) => (
-                          <span 
-                            key={bookingIndex} 
-                            className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-600"
-                          >
-                            #{booking.id} ({booking.customer} - {booking.quantity} units
-                            {booking.startTime && booking.endTime && 
-                              ` @ ${booking.startTime}-${booking.endTime}`
-                            })
-                          </span>
-                        ))}
+                        {availabilityError.conflictingBookings.map(
+                          (booking, bookingIndex) => {
+                            // Format dates for display (avoid hydration issues)
+                            const formatDate = (dateStr: string) => {
+                              const date = new Date(dateStr);
+                              // Always show year to avoid hydration mismatch
+                              return date.toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              });
+                            };
+
+                            const startDate = formatDate(booking.startDate);
+                            const endDate = formatDate(booking.endDate);
+                            const timeRange =
+                              booking.startTime && booking.endTime
+                                ? ` @ ${booking.startTime}-${booking.endTime}`
+                                : "";
+
+                            // Show date range if different dates, otherwise just one date
+                            const dateDisplay =
+                              booking.startDate === booking.endDate
+                                ? startDate
+                                : `${startDate} - ${endDate}`;
+
+                            return (
+                              <span
+                                key={bookingIndex}
+                                className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-600"
+                              >
+                                #{booking.id} ({booking.customer} -{" "}
+                                {booking.quantity} units on {dateDisplay}
+                                {timeRange})
+                              </span>
+                            );
+                          }
+                        )}
                       </div>
                     </div>
                   )}
@@ -182,7 +219,7 @@ export function BookingItemComponent({
             </div>
           </div>
         )}
-        
+
         {/* Quantity, Price/Day, and Subtotal Row */}
         <div className="flex items-end gap-2">
           <div className="flex-1">
@@ -192,15 +229,15 @@ export function BookingItemComponent({
             <input
               type="number"
               min="1"
-              value={item.quantity || ''}
+              value={item.quantity || ""}
               onChange={(e) => {
                 const value = e.target.value;
-                if (value === '') {
-                  onItemUpdate('quantity', 0);
+                if (value === "") {
+                  onItemUpdate("quantity", 0);
                 } else {
                   const numValue = parseInt(value, 10);
                   if (!isNaN(numValue) && numValue >= 1) {
-                    onItemUpdate('quantity', numValue);
+                    onItemUpdate("quantity", numValue);
                   }
                 }
               }}
@@ -208,7 +245,7 @@ export function BookingItemComponent({
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
             />
           </div>
-          
+
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Price/Day <span className="text-red-500">*</span>
@@ -217,15 +254,15 @@ export function BookingItemComponent({
               type="number"
               step="0.01"
               min="0"
-              value={item.pricePerDay || ''}
+              value={item.pricePerDay || ""}
               onChange={(e) => {
                 const value = e.target.value;
-                if (value === '') {
-                  onItemUpdate('pricePerDay', 0);
+                if (value === "") {
+                  onItemUpdate("pricePerDay", 0);
                 } else {
                   const numValue = parseFloat(value);
                   if (!isNaN(numValue) && numValue >= 0) {
-                    onItemUpdate('pricePerDay', numValue);
+                    onItemUpdate("pricePerDay", numValue);
                   }
                 }
               }}
@@ -233,7 +270,7 @@ export function BookingItemComponent({
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50"
             />
           </div>
-          
+
           <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Subtotal
@@ -242,15 +279,15 @@ export function BookingItemComponent({
               type="number"
               step="0.01"
               min="0"
-              value={item.subtotal || ''}
+              value={item.subtotal || ""}
               onChange={(e) => {
                 const value = e.target.value;
-                if (value === '') {
-                  onItemUpdate('subtotal', 0);
+                if (value === "") {
+                  onItemUpdate("subtotal", 0);
                 } else {
                   const numValue = parseFloat(value);
                   if (!isNaN(numValue) && numValue >= 0) {
-                    onItemUpdate('subtotal', numValue);
+                    onItemUpdate("subtotal", numValue);
                   }
                 }
               }}
@@ -259,7 +296,7 @@ export function BookingItemComponent({
               title="Enter custom subtotal (overrides auto-calculated value)"
             />
           </div>
-          
+
           <button
             type="button"
             onClick={onRemove}
@@ -270,7 +307,7 @@ export function BookingItemComponent({
             <X size={16} />
           </button>
         </div>
-        
+
         {/* Item Notes and Custom Timing Buttons */}
         <div className="space-y-3">
           {/* Buttons Row */}
@@ -281,36 +318,38 @@ export function BookingItemComponent({
               onClick={onToggleNotes}
               className={`flex-1 flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
                 hasNoteContent
-                  ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600 text-blue-700 dark:text-blue-300'
-                  : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
+                  ? "border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600 text-blue-700 dark:text-blue-300"
+                  : "border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600"
               }`}
               disabled={isSubmitting}
             >
               <MessageSquare size={16} />
-              {hasNoteContent ? 'Edit Note' : 'Add Note'}
+              {hasNoteContent ? "Edit Note" : "Add Note"}
               {hasNoteContent && (
                 <span className="text-xs font-medium">
                   ({item.notes?.length} chars)
                 </span>
               )}
             </button>
-            
+
             {/* Custom Timing Button */}
             <button
               type="button"
               onClick={onToggleCustomTiming}
               className={`flex-1 flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
                 item.hasCustomTiming
-                  ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600 text-blue-700 dark:text-blue-300'
-                  : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
+                  ? "border-blue-300 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-600 text-blue-700 dark:text-blue-300"
+                  : "border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600"
               }`}
               disabled={isSubmitting}
             >
               <Clock size={16} />
-              {item.hasCustomTiming ? 'Remove Custom Timing' : 'Set Custom Timing'}
+              {item.hasCustomTiming
+                ? "Remove Custom Timing"
+                : "Set Custom Timing"}
             </button>
           </div>
-          
+
           {/* Expanded Notes Section */}
           {expandedNotes && (
             <div className="space-y-2">
@@ -329,8 +368,8 @@ export function BookingItemComponent({
                 </button>
               </div>
               <textarea
-                value={item.notes || ''}
-                onChange={(e) => onItemUpdate('notes', e.target.value)}
+                value={item.notes || ""}
+                onChange={(e) => onItemUpdate("notes", e.target.value)}
                 disabled={isSubmitting}
                 placeholder="Enter notes for this item..."
                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-gray-100 disabled:opacity-50 resize-none"
@@ -339,7 +378,7 @@ export function BookingItemComponent({
             </div>
           )}
         </div>
-        
+
         {/* Custom Timing Fields */}
         {item.hasCustomTiming && (
           <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
@@ -353,8 +392,10 @@ export function BookingItemComponent({
                 </label>
                 <input
                   type="date"
-                  value={item.itemStartDate || ''}
-                  onChange={(e) => onItemUpdate('itemStartDate', e.target.value)}
+                  value={item.itemStartDate || ""}
+                  onChange={(e) =>
+                    onItemUpdate("itemStartDate", e.target.value)
+                  }
                   disabled={isSubmitting}
                   className="w-full px-2 py-1 text-xs border border-blue-300 dark:border-blue-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent dark:bg-blue-900/30 dark:text-blue-100"
                 />
@@ -365,8 +406,10 @@ export function BookingItemComponent({
                 </label>
                 <input
                   type="time"
-                  value={item.itemStartTime || ''}
-                  onChange={(e) => onItemUpdate('itemStartTime', e.target.value)}
+                  value={item.itemStartTime || ""}
+                  onChange={(e) =>
+                    onItemUpdate("itemStartTime", e.target.value)
+                  }
                   disabled={isSubmitting}
                   className="w-full px-2 py-1 text-xs border border-blue-300 dark:border-blue-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent dark:bg-blue-900/30 dark:text-blue-100"
                 />
@@ -377,8 +420,8 @@ export function BookingItemComponent({
                 </label>
                 <input
                   type="date"
-                  value={item.itemEndDate || ''}
-                  onChange={(e) => onItemUpdate('itemEndDate', e.target.value)}
+                  value={item.itemEndDate || ""}
+                  onChange={(e) => onItemUpdate("itemEndDate", e.target.value)}
                   disabled={isSubmitting}
                   className="w-full px-2 py-1 text-xs border border-blue-300 dark:border-blue-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent dark:bg-blue-900/30 dark:text-blue-100"
                 />
@@ -389,8 +432,8 @@ export function BookingItemComponent({
                 </label>
                 <input
                   type="time"
-                  value={item.itemEndTime || ''}
-                  onChange={(e) => onItemUpdate('itemEndTime', e.target.value)}
+                  value={item.itemEndTime || ""}
+                  onChange={(e) => onItemUpdate("itemEndTime", e.target.value)}
                   disabled={isSubmitting}
                   className="w-full px-2 py-1 text-xs border border-blue-300 dark:border-blue-600 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent dark:bg-blue-900/30 dark:text-blue-100"
                 />

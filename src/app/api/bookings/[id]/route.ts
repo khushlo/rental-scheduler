@@ -3,6 +3,139 @@ import { prisma } from '@/lib/prisma'
 import { BookingSchema } from '@/lib/validations'
 import { calculateBookingStatus } from '@/lib/utils'
 
+interface SweepEvent {
+  time: Date
+  change: number // +quantity for start, -quantity for end
+  type: 'start' | 'end'
+  bookingId: number
+}
+
+interface AvailabilityResult {
+  available: boolean
+  maxUsageDuringPeriod: number
+  availableQuantity: number
+  peakUsage: number
+}
+
+/**
+ * Enhanced Sweep Line Algorithm for conflict detection with detailed availability info
+ * Handles tie-breaking: when events happen at the same time, END events are processed first
+ */
+function checkAvailabilityUsingSweepLine(
+  overlappingBookings: any[],
+  requestStart: Date,
+  requestEnd: Date,
+  requestedQuantity: number,
+  totalQuantity: number
+): AvailabilityResult {
+  const events: SweepEvent[] = []
+
+  // Add existing booking events (only confirmed/active bookings)
+  overlappingBookings.forEach(booking => {
+    const status = calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd)
+    if (status === 'confirmed' || status === 'active') {
+      const bookingQuantity = booking.items.reduce((sum: number, item: any) => sum + item.quantity, 0)
+      
+      // Create start and end times for this booking
+      const bookingStart = new Date(booking.startDate)
+      const [startHours, startMinutes] = booking.startTime.split(':').map(Number)
+      bookingStart.setHours(startHours, startMinutes, 0, 0)
+      
+      const bookingEnd = new Date(booking.endDate)
+      const [endHours, endMinutes] = booking.endTime.split(':').map(Number)
+      bookingEnd.setHours(endHours, endMinutes, 0, 0)
+      
+      events.push({
+        time: bookingStart,
+        change: bookingQuantity,
+        type: 'start',
+        bookingId: booking.id
+      })
+      
+      events.push({
+        time: bookingEnd,
+        change: -bookingQuantity,
+        type: 'end',
+        bookingId: booking.id
+      })
+    }
+  })
+
+  // Sort events with tie-breaker rule (without adding new booking yet)
+  events.sort((a, b) => {
+    const timeDiff = a.time.getTime() - b.time.getTime()
+    if (timeDiff !== 0) return timeDiff
+    
+    // Tie-breaker: negative changes (end events) come before positive changes (start events)
+    return a.change - b.change
+  })
+
+  // Calculate usage at the start of the requested period (without the new booking)
+  let currentUsage = 0
+  let maxUsageDuringPeriod = 0
+  let usageAtRequestStart = 0
+  
+  for (const event of events) {
+    currentUsage += event.change
+    
+    // Track usage exactly at the start time of the request
+    if (event.time <= requestStart) {
+      usageAtRequestStart = currentUsage
+    }
+    
+    // Also track maximum usage during the requested time period for existing logic
+    if (event.time >= requestStart && event.time < requestEnd) {
+      maxUsageDuringPeriod = Math.max(maxUsageDuringPeriod, currentUsage)
+    }
+  }
+
+  // Now add the new booking events and check for conflicts
+  events.push({
+    time: requestStart,
+    change: requestedQuantity,
+    type: 'start',
+    bookingId: -1
+  })
+  
+  events.push({
+    time: requestEnd,
+    change: -requestedQuantity,
+    type: 'end',
+    bookingId: -1
+  })
+
+  // Re-sort with new booking events
+  events.sort((a, b) => {
+    const timeDiff = a.time.getTime() - b.time.getTime()
+    if (timeDiff !== 0) return timeDiff
+    return a.change - b.change
+  })
+
+  // Sweep through events and track peak usage
+  currentUsage = 0
+  let peakUsage = 0
+  let isAvailable = true
+  
+  for (const event of events) {
+    currentUsage += event.change
+    peakUsage = Math.max(peakUsage, currentUsage)
+    
+    // If usage exceeds total quantity at any point, there's a conflict
+    if (currentUsage > totalQuantity) {
+      isAvailable = false
+    }
+  }
+
+  const availableQuantity = totalQuantity - usageAtRequestStart
+
+  return {
+    available: isAvailable,
+    maxUsageDuringPeriod,
+    availableQuantity,
+    peakUsage
+  }
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -67,6 +200,9 @@ export async function PUT(
             where: {
               productId: item.productId
             }
+          },
+          customer: {
+            select: { name: true, phone1: true }
           }
         }
       })
@@ -80,47 +216,36 @@ export async function PUT(
       const [newEndHours, newEndMinutes] = validatedData.endTime.split(':').map(Number)
       newBookingEnd.setHours(newEndHours, newEndMinutes, 0, 0)
 
-      // Filter for actual time-based overlaps and active/confirmed bookings
-      const overlappingBookings = allOverlappingBookings.filter(booking => {
-        const status = calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd)
-        if (status !== 'confirmed' && status !== 'active') {
-          return false // Skip completed/cancelled bookings
-        }
+      // Use Sweep Line Algorithm for accurate conflict detection (excluding current booking)
+      const sweepResult = checkAvailabilityUsingSweepLine(
+        allOverlappingBookings,
+        newBookingStart,
+        newBookingEnd,
+        item.quantity,
+        product.quantity
+      )
 
-        // Create DateTime objects for existing booking
-        const existingBookingStart = new Date(booking.startDate)
-        const [existingStartHours, existingStartMinutes] = booking.startTime.split(':').map(Number)
-        existingBookingStart.setHours(existingStartHours, existingStartMinutes, 0, 0)
+      if (!sweepResult.available) {
+        // Filter only active/confirmed bookings for display in error
+        const conflictingBookings = allOverlappingBookings.filter(booking => {
+          const status = calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd)
+          return status === 'confirmed' || status === 'active'
+        })
 
-        const existingBookingEnd = new Date(booking.endDate)
-        const [existingEndHours, existingEndMinutes] = booking.endTime.split(':').map(Number)
-        existingBookingEnd.setHours(existingEndHours, existingEndMinutes, 0, 0)
-
-        // Check for time overlap: start1 < end2 AND start2 < end1
-        return newBookingStart < existingBookingEnd && existingBookingStart < newBookingEnd
-      })
-
-      const totalBookedQuantity = overlappingBookings.reduce((total, booking) => {
-        return total + booking.items.reduce((itemTotal, bookingItem) => {
-          return itemTotal + bookingItem.quantity
-        }, 0)
-      }, 0)
-
-      const availableQuantity = product.quantity - totalBookedQuantity
-      if (item.quantity > availableQuantity) {
         return NextResponse.json(
           { 
-            error: `Insufficient quantity for "${product.name}". Requested: ${item.quantity}, Available: ${availableQuantity}, Total quantity: ${product.quantity}`,
+            error: `Insufficient quantity for "${product.name}". Requested: ${item.quantity}, Available: ${sweepResult.availableQuantity}, Total quantity: ${product.quantity}`,
             productId: product.id,
             requestedQuantity: item.quantity,
-            availableQuantity: availableQuantity,
+            availableQuantity: sweepResult.availableQuantity,
             totalQuantity: product.quantity,
-            conflictingBookings: overlappingBookings.map(b => ({
+            conflictingBookings: conflictingBookings.map(b => ({
               id: b.id,
               startDate: b.startDate,
               endDate: b.endDate,
               startTime: b.startTime,
               endTime: b.endTime,
+              customer: (b as any).customer.name,
               quantity: b.items.reduce((sum, i) => sum + i.quantity, 0)
             }))
           },
