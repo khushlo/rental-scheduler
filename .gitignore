@@ -68,3 +68,5 @@ pids
 *.pid
 *.seed
 *.pid.lock
+
+node-app
