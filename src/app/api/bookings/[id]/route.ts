@@ -3,6 +3,28 @@ import { prisma } from '@/lib/prisma'
 import { BookingSchema } from '@/lib/validations'
 import { calculateBookingStatus } from '@/lib/utils'
 
+interface BookingWithItems {
+  id: number
+  startDate: Date
+  endDate: Date
+  startTime: string
+  endTime: string
+  rowStatusCd: string
+  items: Array<{
+    id: number
+    quantity: number
+    productId: number
+    itemStartDate?: Date | null
+    itemEndDate?: Date | null
+    itemStartTime?: string | null
+    itemEndTime?: string | null
+  }>
+  customer: {
+    name: string
+    phone1: string | null
+  }
+}
+
 interface SweepEvent {
   time: Date
   change: number // +quantity for start, -quantity for end
@@ -227,7 +249,7 @@ export async function PUT(
 
       if (!sweepResult.available) {
         // Filter only active/confirmed bookings for display in error
-        const conflictingBookings = allOverlappingBookings.filter(booking => {
+        const conflictingBookings = allOverlappingBookings.filter((booking: any) => {
           const status = calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd)
           return status === 'confirmed' || status === 'active'
         })
@@ -239,14 +261,14 @@ export async function PUT(
             requestedQuantity: item.quantity,
             availableQuantity: sweepResult.availableQuantity,
             totalQuantity: product.quantity,
-            conflictingBookings: conflictingBookings.map(b => ({
+            conflictingBookings: conflictingBookings.map((b: any) => ({
               id: b.id,
               startDate: b.startDate,
               endDate: b.endDate,
               startTime: b.startTime,
               endTime: b.endTime,
-              customer: (b as any).customer.name,
-              quantity: b.items.reduce((sum, i) => sum + i.quantity, 0)
+              customer: b.customer.name,
+              quantity: b.items.reduce((sum: number, i: any) => sum + i.quantity, 0)
             }))
           },
           { status: 409 }

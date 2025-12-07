@@ -1,8 +1,15 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { Calendar, Package, Users, Clock, TrendingUp, AlertTriangle } from 'lucide-react'
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import {
+  Calendar,
+  Package,
+  Users,
+  Clock,
+  TrendingUp,
+  AlertTriangle,
+} from "lucide-react";
 
 interface DashboardStats {
   totalCustomers: number;
@@ -18,20 +25,20 @@ export default function Home() {
     activeBookings: 0,
     completedBookings: 0,
     confirmedBookings: 0,
-    monthlyRevenue: 0
+    monthlyRevenue: 0,
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('/api/dashboard');
+        const response = await fetch("/api/dashboard");
         if (response.ok) {
           const data = await response.json();
           setStats(data);
         }
       } catch (error) {
-        console.error('Failed to fetch dashboard stats:', error);
+        console.error("Failed to fetch dashboard stats:", error);
       } finally {
         setLoading(false);
       }
@@ -41,9 +48,9 @@ export default function Home() {
   }, []);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR'
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
     }).format(amount);
   };
 
@@ -55,7 +62,8 @@ export default function Home() {
             Rental Management Dashboard
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Manage your rental business efficiently. Schedule bookings, track inventory, and avoid conflicts.
+            Manage your rental business efficiently. Schedule bookings, track
+            inventory, and avoid conflicts.
           </p>
         </div>
 
@@ -67,9 +75,11 @@ export default function Home() {
                 <Calendar className="h-6 w-6 text-blue-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Completed Bookings</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Completed Bookings
+                </p>
                 <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                  {loading ? '...' : stats.completedBookings}
+                  {loading ? "..." : stats.completedBookings}
                 </p>
               </div>
             </div>
@@ -81,9 +91,11 @@ export default function Home() {
                 <Calendar className="h-6 w-6 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Confirmed Bookings</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Confirmed Bookings
+                </p>
                 <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                  {loading ? '...' : stats.confirmedBookings}
+                  {loading ? "..." : stats.confirmedBookings}
                 </p>
               </div>
             </div>
@@ -95,9 +107,11 @@ export default function Home() {
                 <Calendar className="h-6 w-6 text-purple-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Active Bookings</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Active Bookings
+                </p>
                 <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                  {loading ? '...' : stats.activeBookings}
+                  {loading ? "..." : stats.activeBookings}
                 </p>
               </div>
             </div>
@@ -109,9 +123,11 @@ export default function Home() {
                 <TrendingUp className="h-6 w-6 text-yellow-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Monthly Revenue</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Monthly Revenue
+                </p>
                 <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                  {loading ? '...' : formatCurrency(stats.monthlyRevenue)}
+                  {loading ? "..." : formatCurrency(stats.monthlyRevenue)}
                 </p>
               </div>
             </div>
@@ -125,9 +141,11 @@ export default function Home() {
               <Users className="h-6 w-6 text-indigo-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Customers</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                Total Customers
+              </p>
               <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                {loading ? '...' : stats.totalCustomers}
+                {loading ? "..." : stats.totalCustomers}
               </p>
             </div>
           </div>
@@ -221,7 +239,8 @@ export default function Home() {
                 Calendar View
               </h3>
               <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                Visual calendar to see all bookings and availability at a glance.
+                Visual calendar to see all bookings and availability at a
+                glance.
               </p>
               <div className="mt-3">
                 <span className="text-sm font-medium text-orange-600 dark:text-orange-400 group-hover:text-orange-700 dark:group-hover:text-orange-300">
@@ -234,27 +253,44 @@ export default function Home() {
 
         {/* Features Overview */}
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Key Features</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            Key Features
+          </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex items-start space-x-3">
               <Clock className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
               <div>
-                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Advanced Data Grids</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Powerful tables with pagination (50 items per page), search, and filtering capabilities.</p>
+                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Advanced Data Grids
+                </h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Powerful tables with pagination (50 items per page), search,
+                  and filtering capabilities.
+                </p>
               </div>
             </div>
             <div className="flex items-start space-x-3">
               <Calendar className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
               <div>
-                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Visual Calendar</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Interactive calendar view to see all bookings and availability at a glance.</p>
+                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Visual Calendar
+                </h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Interactive calendar view to see all bookings and availability
+                  at a glance.
+                </p>
               </div>
             </div>
             <div className="flex items-start space-x-3">
               <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
               <div>
-                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Conflict Prevention</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Smart scheduling system to prevent double-bookings and manage availability.</p>
+                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Conflict Prevention
+                </h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Smart scheduling system to prevent double-bookings and manage
+                  availability.
+                </p>
               </div>
             </div>
           </div>

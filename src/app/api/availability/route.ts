@@ -2,6 +2,28 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { calculateBookingStatus } from '@/lib/utils'
 
+interface BookingWithItems {
+  id: number
+  startDate: Date
+  endDate: Date
+  startTime: string
+  endTime: string
+  rowStatusCd: string
+  items: Array<{
+    id: number
+    quantity: number
+    productId: number
+    itemStartDate?: Date | null
+    itemEndDate?: Date | null
+    itemStartTime?: string | null
+    itemEndTime?: string | null
+  }>
+  customer: {
+    name: string
+    phone1: string | null
+  }
+}
+
 interface SweepEvent {
   time: Date
   change: number // +quantity for start, -quantity for end
@@ -257,7 +279,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Filter for actual time-based overlaps considering individual item timing
-    const overlappingBookings = potentiallyOverlappingBookings.filter(booking => {
+    const overlappingBookings = potentiallyOverlappingBookings.filter((booking: any) => {
       // Check if any item in this booking conflicts with the requested time
       return booking.items.some((item: any) => {
         // Determine effective timing for this item
@@ -324,7 +346,7 @@ export async function GET(request: NextRequest) {
     const accurateAvailableQuantity = sweepResult.availableQuantity
 
     // Calculate available quantity for display purposes
-    const bookedQuantity = overlappingBookings.reduce((total, booking) => {
+    const bookedQuantity = overlappingBookings.reduce((total: number, booking: any) => {
       const status = calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd)
       // Only count bookings that are confirmed or active
       if (status === 'confirmed' || status === 'active') {
@@ -348,7 +370,7 @@ export async function GET(request: NextRequest) {
       // Create timeline of all existing bookings to check for adequate spacing
       const delayMilliseconds = (product as any).delayInHours * 60 * 60 * 1000;
       
-      delayedOverlappingBookings = potentiallyOverlappingBookings.filter(booking => {
+      delayedOverlappingBookings = potentiallyOverlappingBookings.filter((booking: any) => {
         return booking.items.some((item: any) => {
           let itemStartDateTime: Date;
           let itemEndDateTime: Date;
@@ -416,7 +438,7 @@ export async function GET(request: NextRequest) {
         });
       })
 
-      const delayedBookedQuantity = delayedOverlappingBookings.reduce((total, booking) => {
+      const delayedBookedQuantity = delayedOverlappingBookings.reduce((total: number, booking: any) => {
         const status = calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd)
         if (status === 'confirmed' || status === 'active') {
           return total + (booking.items as any[]).reduce((itemTotal: number, bookingItem: any) => {
@@ -450,11 +472,11 @@ export async function GET(request: NextRequest) {
         endDateTime: requestEndDateTime.toISOString()
       },
       conflictingBookings: (delayApplied ? delayedOverlappingBookings : overlappingBookings)
-        .filter(booking => {
+        .filter((booking: any) => {
           const status = calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd)
           return status === 'confirmed' || status === 'active'
         })
-        .map(booking => ({
+        .map((booking: any) => ({
           id: booking.id,
           startDate: booking.startDate,
           endDate: booking.endDate,
@@ -558,7 +580,7 @@ export async function POST(request: NextRequest) {
           )
 
           // Calculate available quantity for display purposes
-          const bookedQuantity = overlappingBookings.reduce((total, booking) => {
+          const bookedQuantity = overlappingBookings.reduce((total: number, booking: any) => {
             const status = calculateBookingStatus(booking.startDate, booking.endDate)
             // Only count bookings that are confirmed or active
             if (status === 'confirmed' || status === 'active') {
@@ -580,7 +602,7 @@ export async function POST(request: NextRequest) {
             // Check availability considering actual time gaps (not double delay buffers)
             const delayMilliseconds = product.delayInHours * 60 * 60 * 1000;
             
-            const delayedFilteredBookings = overlappingBookings.filter(booking => {
+            const delayedFilteredBookings = overlappingBookings.filter((booking: any) => {
               if (!startTime || !endTime) {
                 const requestStart = new Date(startDate);
                 const requestEnd = new Date(endDate);
@@ -630,7 +652,7 @@ export async function POST(request: NextRequest) {
               return true;
             })
 
-            const delayedBookedQuantity = delayedFilteredBookings.reduce((total, booking) => {
+            const delayedBookedQuantity = delayedFilteredBookings.reduce((total: number, booking: any) => {
               const status = calculateBookingStatus(booking.startDate, booking.endDate)
               if (status === 'confirmed' || status === 'active') {
                 return total + booking.items.reduce((itemTotal: number, item: any) => {
