@@ -27,7 +27,12 @@ jobs:
       - name: npm install, build, and test
         run: |
           npm ci
-          npx prisma generate
+          # Ensure we're using Prisma 6.19.0 explicitly
+          echo "Verifying Prisma version..."
+          npm ls prisma @prisma/client
+          # Force Prisma 6.19.0 to avoid v7 compatibility issues
+          npx prisma@6.19.0 generate
+          echo "Prisma client generated successfully"
           npm run build:prod
           npm run test --if-present
         env:
@@ -158,3 +163,4 @@ jobs:
           app-name: "rental-scheduler"
           slot-name: "Production"
           package: .
+          startup-command: "npx prisma@6.19.0 generate && npm start"
