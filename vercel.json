@@ -6,5 +6,10 @@
       "use": "@vercel/next"
     }
   ],
-  "installCommand": "npm install && npx prisma generate"
+  "installCommand": "npm install && npx prisma generate",
+  "git": {
+    "deploymentEnabled": {
+      "main": false
+    }
+  }
 }
