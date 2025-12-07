@@ -58,6 +58,14 @@ jobs:
           echo "=== Total file count in deployment ==="
           find deployment/ -type f | wc -l
 
+      - name: Rename .next to next-build for artifact preservation
+        run: |
+          if [ -d "deployment/.next" ]; then
+            mv deployment/.next deployment/next-build
+            echo "Renamed .next to next-build for artifact upload"
+            ls -la deployment/next-build/
+          fi
+
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
@@ -77,12 +85,20 @@ jobs:
         with:
           name: node-app
 
-      - name: Verify downloaded artifact contents
+      - name: Restore .next directory and verify contents
         run: |
           echo "=== Downloaded artifact contents ==="
           ls -la ./
-          echo "=== Checking for .next directory in downloaded artifact ==="
-          ls -la ./.next/ || echo "ERROR: .next directory missing from downloaded artifact!"
+          echo "=== Checking for next-build directory ==="
+          if [ -d "./next-build" ]; then
+            mv ./next-build ./.next
+            echo "Renamed next-build back to .next"
+            ls -la ./.next/
+          else
+            echo "ERROR: next-build directory missing from downloaded artifact!"
+          fi
+          echo "=== Final artifact contents after rename ==="
+          ls -la ./
           echo "=== Total files in downloaded artifact ==="
           find ./ -type f | wc -l
 
