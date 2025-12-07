@@ -39,6 +39,20 @@ jobs:
           # Copy all standalone build content including .next directory
           cp -r .next/standalone/. deployment/
 
+          # Copy the generated Prisma client (CRITICAL for Azure)
+          echo "=== Copying Prisma client ==="
+          if [ -d "node_modules/.prisma" ]; then
+            mkdir -p deployment/node_modules/.prisma
+            cp -r node_modules/.prisma deployment/node_modules/
+            echo "Copied .prisma directory to deployment"
+            ls -la deployment/node_modules/.prisma/
+          fi
+          if [ -d "node_modules/@prisma" ]; then
+            mkdir -p deployment/node_modules/@prisma
+            cp -r node_modules/@prisma deployment/node_modules/
+            echo "Copied @prisma directory to deployment"
+          fi
+
           # Ensure proper static file structure
           echo "=== Fixing static files structure ==="
           if [ -d ".next/static" ]; then
@@ -62,6 +76,9 @@ jobs:
           ls -la deployment/
           echo "=== Checking for .next directory ==="
           ls -la deployment/.next/ || echo "ERROR: .next directory missing from deployment!"
+          echo "=== Checking for Prisma client ==="
+          ls -la deployment/node_modules/.prisma/ || echo "ERROR: .prisma directory missing!"
+          ls -la deployment/node_modules/@prisma/ || echo "ERROR: @prisma directory missing!"
           echo "=== Checking static files ==="
           find deployment/.next/static -name "*.css" -o -name "*.js" | head -20
           echo "=== Total file count in deployment ==="
@@ -73,6 +90,14 @@ jobs:
             mv deployment/.next deployment/next-build
             echo "Renamed .next to next-build for artifact upload"
             ls -la deployment/next-build/
+          fi
+
+      - name: Rename .prisma to prisma-client for artifact preservation
+        run: |
+          if [ -d "deployment/node_modules/.prisma" ]; then
+            mv deployment/node_modules/.prisma deployment/node_modules/prisma-client
+            echo "Renamed .prisma to prisma-client for artifact upload"
+            ls -la deployment/node_modules/prisma-client/
           fi
 
       - name: Upload artifact for deployment job
@@ -94,7 +119,7 @@ jobs:
         with:
           name: node-app
 
-      - name: Restore .next directory and verify contents
+      - name: Restore .next and .prisma directories and verify contents
         run: |
           echo "=== Downloaded artifact contents ==="
           ls -la ./
@@ -105,6 +130,14 @@ jobs:
             ls -la ./.next/
           else
             echo "ERROR: next-build directory missing from downloaded artifact!"
+          fi
+          echo "=== Checking for prisma-client directory ==="
+          if [ -d "./node_modules/prisma-client" ]; then
+            mv ./node_modules/prisma-client ./node_modules/.prisma
+            echo "Renamed prisma-client back to .prisma"
+            ls -la ./node_modules/.prisma/
+          else
+            echo "ERROR: prisma-client directory missing from downloaded artifact!"
           fi
           echo "=== Final artifact contents after rename ==="
           ls -la ./
