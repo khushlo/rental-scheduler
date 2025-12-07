@@ -28,7 +28,7 @@ jobs:
         run: |
           npm ci
           npx prisma generate
-          npm run build:prod --if-present || npx next build
+          npm run build:prod
           npm run test --if-present
         env:
           NODE_ENV: production
