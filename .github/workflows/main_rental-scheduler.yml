@@ -42,11 +42,24 @@ jobs:
       - name: Prepare static files and deployment package
         run: |
           mkdir -p deployment
+          # Copy standalone build files
           cp -r .next/standalone/* deployment/
-          cp -r .next/static deployment/.next/static
-          cp -r public deployment/public
+          # Create .next directory structure if it doesn't exist
+          mkdir -p deployment/.next
+          # Copy static files if they exist
+          if [ -d ".next/static" ]; then
+            cp -r .next/static deployment/.next/static
+          fi
+          # Copy public files if they exist
+          if [ -d "public" ]; then
+            cp -r public deployment/public
+          fi
+          # Copy package files
           cp package*.json deployment/
-          cp -r prisma deployment/prisma
+          # Copy prisma files if they exist
+          if [ -d "prisma" ]; then
+            cp -r prisma deployment/prisma
+          fi
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
