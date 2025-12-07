@@ -38,23 +38,32 @@ jobs:
           mkdir -p deployment
           # Copy all standalone build content including .next directory
           cp -r .next/standalone/. deployment/
-          # Copy additional static files if they exist
+
+          # Ensure proper static file structure
+          echo "=== Fixing static files structure ==="
           if [ -d ".next/static" ]; then
-            mkdir -p deployment/.next/static
-            cp -r .next/static deployment/.next/static/
+            # Remove any existing static directory in deployment/.next/
+            rm -rf deployment/.next/static
+            # Copy static files to correct location
+            cp -r .next/static deployment/.next/
+            echo "Copied .next/static to deployment/.next/static"
+            ls -la deployment/.next/static/
           fi
+
           # Copy public directory if it exists
           if [ -d "public" ]; then
             cp -r public deployment/
+            echo "Copied public directory"
           fi
 
       - name: Verify deployment package contents
         run: |
           echo "=== Final deployment package contents ==="
-          find deployment/ -type f -name ".*" | head -20
           ls -la deployment/
           echo "=== Checking for .next directory ==="
           ls -la deployment/.next/ || echo "ERROR: .next directory missing from deployment!"
+          echo "=== Checking static files ==="
+          find deployment/.next/static -name "*.css" -o -name "*.js" | head -20
           echo "=== Total file count in deployment ==="
           find deployment/ -type f | wc -l
 
