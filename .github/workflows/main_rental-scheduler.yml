@@ -33,26 +33,38 @@ jobs:
         env:
           NODE_ENV: production
 
-      - name: Clean up unnecessary files for deployment
-        run: |
-          rm -rf node_modules/.cache
-          rm -rf .next/cache
-          find . -name "*.map" -type f -delete
-
       - name: Prepare static files and deployment package
         run: |
+          echo "=== Debugging standalone build structure ==="
+          ls -la .next/standalone/
+          echo "=== Checking if .next directory exists in standalone ==="
+          ls -la .next/standalone/.next/ || echo ".next directory not found in standalone"
+          echo "=== Creating deployment directory ==="
           mkdir -p deployment
-          # Copy all standalone build content including hidden directories
+          echo "=== Copying standalone build content ==="
           cp -r .next/standalone/. deployment/
+          echo "=== Checking deployment directory after copy ==="
+          ls -la deployment/
+          echo "=== Checking if .next was copied to deployment ==="
+          ls -la deployment/.next/ || echo ".next directory not found in deployment"
           # Also ensure static files are included
           if [ -d ".next/static" ]; then
+            echo "=== Copying additional static files ==="
             mkdir -p deployment/.next/static
             cp -r .next/static deployment/.next/static/
           fi
           # Copy public directory if it exists
           if [ -d "public" ]; then
+            echo "=== Copying public directory ==="
             cp -r public deployment/
           fi
+
+      - name: Clean up unnecessary files for deployment
+        run: |
+          rm -rf node_modules/.cache
+          # Clean up in deployment directory only, not the source
+          rm -rf deployment/.next/cache 2>/dev/null || true
+          find deployment/ -name "*.map" -type f -delete 2>/dev/null || true
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
