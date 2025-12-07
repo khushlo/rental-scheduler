@@ -21,19 +21,38 @@ jobs:
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
-          node-version: '24.x'
+          node-version: "24.x"
+          cache: "npm"
 
       - name: npm install, build, and test
         run: |
-          npm install
+          npm ci
+          npx prisma generate
           npm run build --if-present
           npm run test --if-present
+        env:
+          NODE_ENV: production
+
+      - name: Clean up unnecessary files for deployment
+        run: |
+          rm -rf node_modules/.cache
+          rm -rf .next/cache
+          find . -name "*.map" -type f -delete
+
+      - name: Prepare static files and deployment package
+        run: |
+          mkdir -p deployment
+          cp -r .next/standalone/* deployment/
+          cp -r .next/static deployment/.next/static
+          cp -r public deployment/public
+          cp package*.json deployment/
+          cp -r prisma deployment/prisma
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: .
+          path: deployment/
 
   deploy:
     runs-on: ubuntu-latest
@@ -47,7 +66,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-app
-      
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -55,11 +74,10 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_B18DBDF671F645A5AFCF914907165AE0 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A27C9BBDE42540E388835B6E8ACE685B }}
 
-      - name: 'Deploy to Azure Web App'
+      - name: "Deploy to Azure Web App"
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'rental-scheduler'
-          slot-name: 'Production'
+          app-name: "rental-scheduler"
+          slot-name: "Production"
           package: .
-          
