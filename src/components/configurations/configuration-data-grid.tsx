@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import { DataGrid, Column } from "@/components/ui/data-grid";
 import { Button } from "@/components/ui/button";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { EditConfigurationDialog } from "./edit-configuration-dialog";
-import { AddConfigurationDialog } from "./add-configuration-dialog";
 
 interface Configuration {
   id: number;
@@ -25,7 +24,6 @@ export default function ConfigurationDataGrid() {
   const [editingConfig, setEditingConfig] = useState<Configuration | null>(
     null
   );
-  const [showAddDialog, setShowAddDialog] = useState(false);
 
   useEffect(() => {
     fetchConfigurations();
@@ -54,11 +52,6 @@ export default function ConfigurationDataGrid() {
 
   const handleEditClose = () => {
     setEditingConfig(null);
-    fetchConfigurations(); // Refresh data
-  };
-
-  const handleAddClose = () => {
-    setShowAddDialog(false);
     fetchConfigurations(); // Refresh data
   };
 
@@ -99,8 +92,8 @@ export default function ConfigurationDataGrid() {
               {config.value || "Empty"}
             </span>
           ) : (
-            <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-md">
-              Not set
+            <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 rounded-md">
+              Not configured
             </span>
           )}
         </div>
@@ -125,7 +118,8 @@ export default function ConfigurationDataGrid() {
           variant="ghost"
           size="sm"
           onClick={() => handleEdit(config)}
-          className="p-2"
+          className="p-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+          title={config.hasValue ? 'Edit value' : 'Configure value'}
         >
           <Pencil className="h-4 w-4" />
         </Button>
@@ -163,13 +157,6 @@ export default function ConfigurationDataGrid() {
                 Manage configuration values for your organization
               </p>
             </div>
-            <Button
-              onClick={() => setShowAddDialog(true)}
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Add Configuration
-            </Button>
           </div>
 
           <DataGrid
@@ -188,8 +175,6 @@ export default function ConfigurationDataGrid() {
           onClose={handleEditClose}
         />
       )}
-
-      <AddConfigurationDialog isOpen={showAddDialog} onClose={handleAddClose} />
     </>
   );
 }

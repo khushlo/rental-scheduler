@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     const tenantContext = getTenantFromRequest(request)
     
-    // Get all configurations with their values for the current tenant
+    // Get all active configurations from master with their values for the current tenant
     const configurations = await prisma.configMaster.findMany({
       where: {
         rowStatusCd: 'A', // Only active configurations
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       orderBy: { configName: 'asc' }
     })
 
-    // Transform the data to include the current value for the tenant
+    // Transform the data to include the current value for the tenant (or null if not set)
     const configsWithValues = configurations.map(config => ({
       id: config.id,
       configName: config.configName,
@@ -46,43 +46,63 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const tenantContext = getTenantFromRequest(request)
     
-    // Validate required fields for creating a new configuration
-    if (!body.configName || typeof body.configName !== 'string') {
-      return NextResponse.json({ error: 'Configuration name is required' }, { status: 400 })
+    // Validate required fields for creating a tenant configuration value
+    if (!body.configId || typeof body.configId !== 'number') {
+      return NextResponse.json({ error: 'Configuration ID is required' }, { status: 400 })
     }
 
-    // Check if configuration already exists
-    const existingConfig = await prisma.configMaster.findUnique({
-      where: { configName: body.configName }
-    })
-
-    if (existingConfig) {
-      return NextResponse.json({ error: 'Configuration with this name already exists' }, { status: 400 })
+    if (!body.value || typeof body.value !== 'string') {
+      return NextResponse.json({ error: 'Configuration value is required' }, { status: 400 })
     }
 
-    // Create new configuration master
-    const config = await prisma.configMaster.create({
-      data: {
-        configName: body.configName,
-        description: body.description || null,
-        rowStatusCd: body.rowStatusCd || 'A',
-        modifiedBy: body.modifiedBy || 'System'
+    // Check if configuration master exists
+    const configMaster = await prisma.configMaster.findFirst({
+      where: { 
+        id: body.configId,
+        rowStatusCd: 'A'
       }
     })
 
-    // If a value is provided, create the config detail for the current tenant
-    if (body.value !== undefined && body.value !== null) {
-      await prisma.configDetails.create({
-        data: {
-          configId: config.id,
-          tenantId: tenantContext.tenantId,
-          value: body.value,
-          modifiedBy: body.modifiedBy || 'System'
-        }
-      })
+    if (!configMaster) {
+      return NextResponse.json({ error: 'Configuration not found or inactive' }, { status: 404 })
     }
 
-    return NextResponse.json(config, { status: 201 })
+    // Check if this tenant already has a value for this configuration
+    const existingDetail = await prisma.configDetails.findFirst({
+      where: {
+        configId: body.configId,
+        tenantId: tenantContext.tenantId
+      }
+    })
+
+    if (existingDetail) {
+      return NextResponse.json({ error: 'Configuration already set for this tenant' }, { status: 400 })
+    }
+
+    // Create the config detail for the current tenant
+    const configDetail = await prisma.configDetails.create({
+      data: {
+        configId: body.configId,
+        tenantId: tenantContext.tenantId,
+        value: body.value,
+        modifiedBy: body.modifiedBy || 'System'
+      },
+      include: {
+        configMaster: true
+      }
+    })
+
+    return NextResponse.json({
+      id: configMaster.id,
+      configName: configMaster.configName,
+      description: configMaster.description,
+      rowStatusCd: configMaster.rowStatusCd,
+      createdAt: configMaster.createdAt,
+      updatedAt: configMaster.updatedAt,
+      modifiedBy: configMaster.modifiedBy,
+      value: configDetail.value,
+      hasValue: true
+    }, { status: 201 })
   } catch (error) {
     console.error('Failed to create configuration:', error)
     return NextResponse.json({ error: 'Failed to create configuration' }, { status: 500 })

@@ -210,6 +210,27 @@ export function BookingDialog({
     }
   }, [hasInitialized, isOpen, mode, formData.items, validateAllItems]);
 
+  // Auto-add default notes for new bookings if configured
+  useEffect(() => {
+    if (
+      mode === "add" &&
+      configurations.length > 0 &&
+      !formData.notes.trim() // Only add if notes are empty
+    ) {
+      const addDefaultNotesConfig = configurations.find(
+        (config) => config.configName === "AddDefaultNotes"
+      );
+
+      // Check if AddDefaultNotes is configured and set to true
+      if (
+        addDefaultNotesConfig &&
+        (addDefaultNotesConfig.value === "true" || addDefaultNotesConfig.value === "1")
+      ) {
+        addDefaultNotes();
+      }
+    }
+  }, [mode, configurations, formData.notes]);
+
   const fetchProducts = async () => {
     try {
       setIsLoading(true);

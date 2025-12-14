@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { FileText, CheckCircle } from "lucide-react";
 import { DataGrid, Column } from "@/components/ui/data-grid";
 import { AddBookingForm } from "./add-booking-form";
 import { EditBookingForm } from "./edit-booking-form";
 import { DeleteBookingButton } from "./delete-booking-button";
+import { fetchBookingsGlobal } from "@/lib/bookings-cache";
 import {
   formatId,
   calculateBookingStatus,
@@ -72,6 +73,8 @@ export function BookingsDataGrid() {
   const [updatingStatusId, setUpdatingStatusId] = useState<number | null>(null);
   const [showCompletedBookings, setShowCompletedBookings] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const hasFetchedInitially = useRef(false);
+  const fetchingRef = useRef(false);
   const router = useRouter();
 
   // Ensure component is mounted on client side to prevent hydration issues
@@ -208,41 +211,28 @@ export function BookingsDataGrid() {
     if (!searchTerm.trim()) return bookings;
 
     const searchLower = searchTerm.toLowerCase();
-    console.log("Searching for:", searchLower);
 
     return bookings.filter((booking) => {
-      console.log(
-        "Checking booking:",
-        booking.id,
-        "Customer:",
-        booking.customer?.name
-      );
 
       // Search in booking ID (formatted)
       if (formatId(booking.id).toLowerCase().includes(searchLower)) {
-        console.log("Found match in booking ID");
         return true;
       }
 
       // Search in customer data
       if (booking.customer?.name?.toLowerCase().includes(searchLower)) {
-        console.log("Found match in customer name");
         return true;
       }
       if (booking.customer?.phone1?.toLowerCase().includes(searchLower)) {
-        console.log("Found match in customer phone1");
         return true;
       }
       if (booking.customer?.phone2?.toLowerCase().includes(searchLower)) {
-        console.log("Found match in customer phone2");
         return true;
       }
       if (booking.customer?.email?.toLowerCase().includes(searchLower)) {
-        console.log("Found match in customer email");
         return true;
       }
       if (booking.customer?.address?.toLowerCase().includes(searchLower)) {
-        console.log("Found match in customer address");
         return true;
       }
 
@@ -321,42 +311,57 @@ export function BookingsDataGrid() {
     });
   };
 
+  // Initial fetch on mount only
   useEffect(() => {
-    fetchBookings();
+    if (!hasFetchedInitially.current) {
+      hasFetchedInitially.current = true;
+      fetchBookings();
+    }
   }, []);
 
-  // Refetch bookings when the completed bookings toggle changes
+  // Refetch when completed bookings toggle changes (after initial mount)
   useEffect(() => {
-    fetchBookings();
+    if (hasFetchedInitially.current) {
+      console.log('Toggle changed, refetching...');
+      fetchBookings();
+    }
   }, [showCompletedBookings]);
 
   const fetchBookings = async () => {
+    // Prevent concurrent calls
+    if (fetchingRef.current) {
+      console.log('Fetch already in progress, skipping...');
+      return;
+    }
+
     try {
+      fetchingRef.current = true;
       setLoading(true);
-      const response = await fetch("/api/bookings");
-      if (response.ok) {
-        const data = await response.json();
+      console.log('Fetching bookings using shared cache...');
+      
+      // Use shared cache with showAllItems=true to get all bookings
+      const data = await fetchBookingsGlobal(null, true);
 
-        // Filter bookings based on rowStatusCd
-        const filteredData = data.filter((booking: Booking) => {
-          if (showCompletedBookings) {
-            // Show both Active (A) and Completed (C) bookings
-            return booking.rowStatusCd === "A" || booking.rowStatusCd === "C";
-          } else {
-            // Show only Active (A) bookings
-            return booking.rowStatusCd === "A" || !booking.rowStatusCd; // Include bookings without rowStatusCd for backward compatibility
-          }
-        });
+      // Filter bookings based on rowStatusCd
+      const filteredData = data.filter((booking: Booking) => {
+        if (showCompletedBookings) {
+          // Show both Active (A) and Completed (C) bookings
+          return booking.rowStatusCd === "A" || booking.rowStatusCd === "C";
+        } else {
+          // Show only Active (A) bookings
+          return booking.rowStatusCd === "A" || !booking.rowStatusCd; // Include bookings without rowStatusCd for backward compatibility
+        }
+      });
 
-        setOriginalBookings(filteredData); // Store filtered data
-        const separatedData = createSeparateBookingEntries(filteredData);
-        setBookings(separatedData);
-        setFilteredBookings(separatedData);
-      }
+      setOriginalBookings(filteredData); // Store filtered data
+      const separatedData = createSeparateBookingEntries(filteredData);
+      setBookings(separatedData);
+      setFilteredBookings(separatedData);
     } catch (error) {
       console.error("Error fetching bookings:", error);
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
   };
 
