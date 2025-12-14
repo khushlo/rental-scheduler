@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { CalendarView } from '@/components/calendar/calendar-view';
 import { OrdersList } from '@/components/orders/orders-list';
+import { fetchProductsGlobal, clearProductsCache } from '@/lib/products-cache';
 import { Calendar, List, Filter } from 'lucide-react';
 
 interface Product {
@@ -13,49 +14,9 @@ interface Product {
   status: boolean;
 }
 
-// Module-level cache to prevent duplicate API calls across component instances
-let productsCache: Product[] | null = null;
-let productsFetchPromise: Promise<Product[]> | null = null;
-
-// Global fetch function with module-level caching
-const fetchProductsGlobal = async (): Promise<Product[]> => {
-  // Return cached data if available
-  if (productsCache) {
-    return productsCache;
-  }
-
-  // Return existing promise if fetch is in progress
-  if (productsFetchPromise) {
-    return productsFetchPromise;
-  }
-
-  // Create new fetch promise
-  productsFetchPromise = (async () => {
-    console.log('🔄 Fetching products from API...');
-    const response = await fetch('/api/products');
-    if (response.ok) {
-      const data = await response.json();
-      const activeProducts = data.filter((product: Product) => product.status);
-      productsCache = activeProducts; // Cache the result
-      console.log('✅ Products fetched and cached:', activeProducts.length);
-      return activeProducts;
-    }
-    throw new Error('Failed to fetch products');
-  })();
-
-  try {
-    const result = await productsFetchPromise;
-    return result;
-  } catch (error) {
-    // Reset promise on error so it can be retried
-    productsFetchPromise = null;
-    throw error;
-  }
-};
-
 export default function CalendarPage() {
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
-  const [products, setProducts] = useState<Product[]>(productsCache || []);
+  const [products, setProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const [showAllItems, setShowAllItems] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -74,10 +35,7 @@ export default function CalendarPage() {
       }
     };
 
-    // Only fetch if we don't have cached data
-    if (!productsCache) {
-      loadProducts();
-    }
+    loadProducts();
   }, []);
 
   return (

@@ -6,6 +6,7 @@ import { DataGrid, Column } from "@/components/ui/data-grid";
 import { AddProductForm } from "./add-product-form";
 import { EditProductForm } from "./edit-product-form";
 import { DeleteProductButton } from "./delete-product-button";
+import { fetchProductsGlobal, clearProductsCache } from '@/lib/products-cache';
 import { formatId } from "@/lib/utils";
 
 interface Product {
@@ -30,16 +31,29 @@ export function ProductsDataGrid() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/products");
-      if (response.ok) {
-        const data = await response.json();
-        setProducts(data);
-      }
+      const data = await fetchProductsGlobal();
+      // fetchProductsGlobal already filters for active products
+      setProducts(data);
     } catch (error) {
       console.error("Error fetching products:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleProductAdded = () => {
+    clearProductsCache();
+    fetchProducts();
+  };
+
+  const handleProductUpdated = () => {
+    clearProductsCache();
+    fetchProducts();
+  };
+
+  const handleProductDeleted = () => {
+    clearProductsCache();
+    fetchProducts();
   };
 
   const columns: Column<Product>[] = [
@@ -129,10 +143,10 @@ export function ProductsDataGrid() {
       width: "17%",
       render: (product) => (
         <div className="flex items-center space-x-2">
-          <EditProductForm product={product} onProductUpdated={fetchProducts} />
+          <EditProductForm product={product} onProductUpdated={handleProductUpdated} />
           <DeleteProductButton
             product={product}
-            onProductDeleted={fetchProducts}
+            onProductDeleted={handleProductDeleted}
           />
         </div>
       ),
@@ -153,7 +167,7 @@ export function ProductsDataGrid() {
             Manage your rental products and inventory
           </p>
         </div>
-        <AddProductForm onProductAdded={fetchProducts} />
+        <AddProductForm onProductAdded={handleProductAdded} />
       </div>
 
       <DataGrid

@@ -8,6 +8,8 @@ import { RentalPeriod } from "./dialog/rental-period";
 import { BookingItemComponent } from "./dialog/booking-item";
 import { AddCustomerForm } from "./dialog/add-customer-form";
 import { AddProductForm } from "./dialog/add-product-form";
+import { fetchProductsGlobal, clearProductsCache } from '@/lib/products-cache';
+import { clearCustomersCache } from '@/lib/customers-cache';
 import { PaymentInformation } from "./dialog/payment-information";
 import { useAvailability } from "./dialog/use-availability";
 import { useProductSearch } from "./dialog/use-product-search";
@@ -234,11 +236,8 @@ export function BookingDialog({
   const fetchProducts = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/products");
-      if (response.ok) {
-        const data = await response.json();
-        setProducts(data);
-      }
+      const data = await fetchProductsGlobal();
+      setProducts(data);
     } catch (error) {
       console.error("Error fetching products:", error);
     } finally {
@@ -343,6 +342,7 @@ export function BookingDialog({
   };
 
   const handleProductAdded = () => {
+    clearProductsCache(); // Clear cache so fresh data is fetched
     fetchProducts(); // Refresh products list
   };
 
@@ -566,6 +566,8 @@ export function BookingDialog({
         if (customerResponse.ok) {
           const newCustomer = await customerResponse.json();
           customerId = newCustomer.id;
+          // Clear customers cache since a new customer was created
+          clearCustomersCache();
         } else {
           throw new Error("Failed to create customer");
         }

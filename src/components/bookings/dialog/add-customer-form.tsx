@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import { clearCustomersCache } from '@/lib/customers-cache';
 
 interface AddCustomerFormProps {
   isOpen: boolean;
@@ -43,6 +44,8 @@ export function AddCustomerForm({ isOpen, onClose, onCustomerAdded }: AddCustome
 
       if (response.ok) {
         const newCustomer = await response.json();
+        // Clear customers cache since a new customer was created
+        clearCustomersCache();
         setFormData({
           name: '',
           phone1: '',

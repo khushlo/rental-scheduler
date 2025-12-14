@@ -275,21 +275,37 @@ export function CalendarView({ selectedProductId, showAllItems }: CalendarViewPr
                     </div>
 
                     <div className="space-y-1">
-                      {dayBookings.slice(0, 3).map((booking) => (
-                        <div
-                          key={booking.id}
-                          className={`
-                            text-xs p-1 rounded border truncate
-                            ${getStatusColor(booking.status)}
-                          `}
-                          title={`${booking.items.length} item${
-                            booking.items.length > 1 ? "s" : ""
-                          } - ${booking.customer.name}`}
-                        >
-                          {booking.items.length} item
-                          {booking.items.length > 1 ? "s" : ""}
-                        </div>
-                      ))}
+                      {dayBookings.slice(0, 3).map((booking) => {
+                        // Calculate display text based on product selection
+                        let displayText, titleText;
+                        if (selectedProductId) {
+                          // Show quantity for selected product only
+                          const selectedProductItems = booking.items.filter(item => 
+                            item.product.id == selectedProductId || item.product.id == selectedProductId.toString()
+                          );
+                          const totalQuantity = selectedProductItems.reduce((sum, item) => sum + item.quantity, 0);
+                          const productName = selectedProductItems[0]?.product.name || 'Unknown Product';
+                          displayText = `${totalQuantity}x`;
+                          titleText = `${totalQuantity}x ${productName} - ${booking.customer.name}`;
+                        } else {
+                          // Show total items count
+                          displayText = `${booking.items.length} item${booking.items.length > 1 ? "s" : ""}`;
+                          titleText = `${booking.items.length} item${booking.items.length > 1 ? "s" : ""} - ${booking.customer.name}`;
+                        }
+                        
+                        return (
+                          <div
+                            key={booking.id}
+                            className={`
+                              text-xs p-1 rounded border truncate
+                              ${getStatusColor(booking.status)}
+                            `}
+                            title={titleText}
+                          >
+                            {displayText}
+                          </div>
+                        );
+                      })}
                       {dayBookings.length > 3 && (
                         <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
                           +{dayBookings.length - 3} more
@@ -314,37 +330,54 @@ export function CalendarView({ selectedProductId, showAllItems }: CalendarViewPr
 
             {selectedDay && selectedDayBookings.length > 0 ? (
               <div className="space-y-3">
-                {selectedDayBookings.map((booking) => (
-                  <div
-                    key={booking.id}
-                    className="border border-gray-200 dark:border-gray-600 rounded-lg p-3 bg-gray-50 dark:bg-gray-700/50"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <h4 className="font-medium text-gray-900 dark:text-gray-100 text-sm">
-                        {booking.items.length} item
-                        {booking.items.length > 1 ? "s" : ""}
-                      </h4>
-                      <span
-                        className={`
-                        text-xs px-2 py-1 rounded-full font-medium
-                        ${getStatusColor(booking.status)}
-                      `}
-                      >
-                        {booking.status}
-                      </span>
-                    </div>
-
-                    <div className="mb-2 space-y-1">
-                      {booking.items.map((item, index) => (
-                        <div
-                          key={index}
-                          className="text-xs text-gray-900 dark:text-gray-100"
+                {selectedDayBookings.map((booking) => {
+                  // Calculate display information based on product selection
+                  let headerText, itemsToShow;
+                  if (selectedProductId) {
+                    // Show only the selected product items
+                    const selectedProductItems = booking.items.filter(item => 
+                      item.product.id == selectedProductId || item.product.id == selectedProductId.toString()
+                    );
+                    const totalQuantity = selectedProductItems.reduce((sum, item) => sum + item.quantity, 0);
+                    const productName = selectedProductItems[0]?.product.name || 'Unknown Product';
+                    headerText = `${totalQuantity}x ${productName}`;
+                    itemsToShow = selectedProductItems;
+                  } else {
+                    // Show all items
+                    headerText = `${booking.items.length} item${booking.items.length > 1 ? "s" : ""}`;
+                    itemsToShow = booking.items;
+                  }
+                  
+                  return (
+                    <div
+                      key={booking.id}
+                      className="border border-gray-200 dark:border-gray-600 rounded-lg p-3 bg-gray-50 dark:bg-gray-700/50"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <h4 className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+                          {headerText}
+                        </h4>
+                        <span
+                          className={`
+                          text-xs px-2 py-1 rounded-full font-medium
+                          ${getStatusColor(booking.status)}
+                        `}
                         >
-                          {item.quantity}x {item.product.name} (₹
-                          {item.pricePerDay}/day)
-                        </div>
-                      ))}
-                    </div>
+                          {booking.status}
+                        </span>
+                      </div>
+
+                      <div className="mb-2 space-y-1">
+                        {itemsToShow.map((item, index) => (
+                          <div
+                            key={index}
+                            className="text-xs text-gray-900 dark:text-gray-100"
+                          >
+                            {item.quantity}x {item.product.name} (₹
+                            {item.pricePerDay}/day)
+                          </div>
+                        ))}
+                      </div>
 
                     <p className="text-sm text-gray-900 dark:text-gray-100 mb-1">
                       {booking.customer.name}
@@ -368,8 +401,9 @@ export function CalendarView({ selectedProductId, showAllItems }: CalendarViewPr
                         {booking.notes}
                       </p>
                     )}
-                  </div>
-                ))}
+                    </div>
+                  );
+                })}
               </div>
             ) : selectedDay ? (
               <p className="text-gray-600 dark:text-gray-300 text-sm">

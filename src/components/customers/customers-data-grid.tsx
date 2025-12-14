@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 import { DataGrid, Column } from "@/components/ui/data-grid";
 import { AddCustomerForm } from "./add-customer-form";
 import { EditCustomerForm } from "./edit-customer-form";
 import { DeleteCustomerButton } from "./delete-customer-button";
+import { fetchCustomersGlobal, clearCustomersCache } from '@/lib/customers-cache';
 import { formatId } from "@/lib/utils";
 
 interface Customer {
@@ -25,24 +26,46 @@ interface Customer {
 export function CustomersDataGrid() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const fetchingRef = useRef(false);
 
   useEffect(() => {
     fetchCustomers();
   }, []);
 
   const fetchCustomers = async () => {
+    // Prevent concurrent calls
+    if (fetchingRef.current) {
+      console.log('Customers fetch already in progress, skipping...');
+      return;
+    }
+
     try {
+      fetchingRef.current = true;
       setLoading(true);
-      const response = await fetch("/api/customers");
-      if (response.ok) {
-        const data = await response.json();
-        setCustomers(data);
-      }
+      console.log('Fetching customers using shared cache...');
+      const data = await fetchCustomersGlobal();
+      setCustomers(data);
     } catch (error) {
       console.error("Error fetching customers:", error);
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
+  };
+
+  const handleCustomerAdded = () => {
+    clearCustomersCache();
+    fetchCustomers();
+  };
+
+  const handleCustomerUpdated = () => {
+    clearCustomersCache();
+    fetchCustomers();
+  };
+
+  const handleCustomerDeleted = () => {
+    clearCustomersCache();
+    fetchCustomers();
   };
 
   const columns: Column<Customer>[] = [
@@ -150,11 +173,11 @@ export function CustomersDataGrid() {
         <div className="flex items-center space-x-2">
           <EditCustomerForm
             customer={customer}
-            onCustomerUpdated={fetchCustomers}
+            onCustomerUpdated={handleCustomerUpdated}
           />
           <DeleteCustomerButton
             customer={customer}
-            onCustomerDeleted={fetchCustomers}
+            onCustomerDeleted={handleCustomerDeleted}
           />
         </div>
       ),
@@ -175,7 +198,7 @@ export function CustomersDataGrid() {
             Manage your customer database and contact information
           </p>
         </div>
-        <AddCustomerForm onCustomerAdded={fetchCustomers} />
+        <AddCustomerForm onCustomerAdded={handleCustomerAdded} />
       </div>
 
       <DataGrid

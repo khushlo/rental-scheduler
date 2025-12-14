@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Plus, X } from 'lucide-react';
+import { clearCustomersCache } from '@/lib/customers-cache';
 
 interface AddCustomerFormProps {
   onCustomerAdded: () => void;
@@ -40,6 +41,8 @@ export function AddCustomerForm({ onCustomerAdded }: AddCustomerFormProps) {
       });
 
       if (response.ok) {
+        // Clear customers cache since a new customer was created
+        clearCustomersCache();
         setFormData({
           name: '',
           phone1: '',
