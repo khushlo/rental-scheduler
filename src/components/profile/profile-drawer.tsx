@@ -1,10 +1,10 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { User, Settings, Lock, Save, Loader2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { useState, useEffect } from "react";
+import { User, Settings, Lock, Save, Loader2, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Sheet,
   SheetContent,
@@ -12,160 +12,182 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '@/components/ui/sheet'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+} from "@/components/ui/sheet";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAuth } from "@/components/auth/auth-provider";
+import dynamic from "next/dynamic";
 
 interface TenantProfile {
-  id: number
-  name: string
-  username: string | null
-  password: string | null
-  storeName: string | null
-  storeEmail: string | null
-  subdomain: string
+  id: number;
+  name: string;
+  username: string | null;
+  password: string | null;
+  storeName: string | null;
+  storeEmail: string | null;
+  subdomain: string;
 }
 
 interface ProfileFormData {
-  name: string
-  username: string
-  password: string
-  confirmPassword: string
+  name: string;
+  username: string;
+  password: string;
+  confirmPassword: string;
 }
 
-export function ProfileDrawer() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [profile, setProfile] = useState<TenantProfile | null>(null)
+function ProfileDrawerComponent() {
+  const { user, logout } = useAuth();
+  const [mounted, setMounted] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [profile, setProfile] = useState<TenantProfile | null>(null);
   const [formData, setFormData] = useState<ProfileFormData>({
-    name: '',
-    username: '',
-    password: '',
-    confirmPassword: ''
-  })
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [message, setMessage] = useState('')
-  const [showPasswordSection, setShowPasswordSection] = useState(false)
+    name: "",
+    username: "",
+    password: "",
+    confirmPassword: "",
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+
+  const handleLogout = async () => {
+    await logout();
+    setIsOpen(false);
+  };
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
-      fetchProfile()
+      fetchProfile();
     }
-  }, [isOpen])
+  }, [isOpen]);
+
+  // Prevent hydration issues
+  if (!mounted) {
+    return (
+      <Button variant="ghost" size="sm" disabled>
+        <User className="h-4 w-4" />
+      </Button>
+    );
+  }
 
   const fetchProfile = async () => {
     try {
-      setIsLoading(true)
+      setIsLoading(true);
       // Using tenant ID 1 as default - in a real app, this would come from auth context
-      const response = await fetch('/api/tenant/profile?tenantId=1')
+      const response = await fetch("/api/tenant/profile?tenantId=1");
       if (response.ok) {
-        const data = await response.json()
-        setProfile(data)
+        const data = await response.json();
+        setProfile(data);
         setFormData({
-          name: data.name || '',
-          username: data.username || '',
-          password: '',
-          confirmPassword: ''
-        })
+          name: data.name || "",
+          username: data.username || "",
+          password: "",
+          confirmPassword: "",
+        });
       } else {
-        setMessage('Failed to load profile')
+        setMessage("Failed to load profile");
       }
     } catch (error) {
-      setMessage('Error loading profile')
+      setMessage("Error loading profile");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleInputChange = (field: keyof ProfileFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-    setMessage('') // Clear message when user types
-  }
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setMessage(""); // Clear message when user types
+  };
 
   const validateForm = (): string | null => {
     if (!formData.name.trim()) {
-      return 'Name is required'
+      return "Name is required";
     }
-    
+
     if (formData.username && formData.username.length < 3) {
-      return 'Username must be at least 3 characters'
+      return "Username must be at least 3 characters";
     }
 
     if (formData.password && formData.password !== formData.confirmPassword) {
-      return 'Passwords do not match'
+      return "Passwords do not match";
     }
 
     if (formData.password && formData.password.length < 6) {
-      return 'Password must be at least 6 characters'
+      return "Password must be at least 6 characters";
     }
 
-    return null
-  }
+    return null;
+  };
 
   const handleSave = async () => {
-    const validationError = validateForm()
+    const validationError = validateForm();
     if (validationError) {
-      setMessage(validationError)
-      return
+      setMessage(validationError);
+      return;
     }
 
     try {
-      setIsSaving(true)
-      setMessage('')
+      setIsSaving(true);
+      setMessage("");
 
       const updateData: any = {
         tenantId: profile?.id,
-        name: formData.name
-      }
+        name: formData.name,
+      };
 
       // Only include username if it's provided
       if (formData.username.trim()) {
-        updateData.username = formData.username
+        updateData.username = formData.username;
       }
 
       // Only include password if it's provided
       if (formData.password) {
-        updateData.password = formData.password
+        updateData.password = formData.password;
       }
 
-      const response = await fetch('/api/tenant/profile', {
-        method: 'PUT',
+      const response = await fetch("/api/tenant/profile", {
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(updateData),
-      })
+      });
 
       if (response.ok) {
-        const updatedProfile = await response.json()
-        setProfile(updatedProfile.tenant)
-        setMessage('Profile updated successfully!')
-        setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }))
-        setShowPasswordSection(false)
-        
+        const updatedProfile = await response.json();
+        setProfile(updatedProfile.tenant);
+        setMessage("Profile updated successfully!");
+        setFormData((prev) => ({ ...prev, password: "", confirmPassword: "" }));
+        setShowPasswordSection(false);
+
         // Close drawer after 2 seconds
         setTimeout(() => {
-          setIsOpen(false)
-          setMessage('')
-        }, 2000)
+          setIsOpen(false);
+          setMessage("");
+        }, 2000);
       } else {
-        const errorData = await response.json()
-        setMessage(errorData.error || 'Failed to update profile')
+        const errorData = await response.json();
+        setMessage(errorData.error || "Failed to update profile");
       }
     } catch (error) {
-      setMessage('Error updating profile')
+      setMessage("Error updating profile");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const getInitials = (name: string) => {
     return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
       .toUpperCase()
-      .slice(0, 2)
-  }
+      .slice(0, 2);
+  };
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -177,7 +199,7 @@ export function ProfileDrawer() {
         >
           <Avatar className="h-8 w-8">
             <AvatarFallback className="text-xs">
-              {profile ? getInitials(profile.name) : 'U'}
+              {user ? getInitials(user.username) : "U"}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -191,6 +213,14 @@ export function ProfileDrawer() {
           <SheetDescription>
             Update your profile information and credentials.
           </SheetDescription>
+          {user && (
+            <div className="mt-2 text-sm">
+              <span className="font-medium">Current User:</span> {user.username}
+              <span className="ml-2 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
+                Tenant ID: {user.tenantId}
+              </span>
+            </div>
+          )}
         </SheetHeader>
 
         {isLoading ? (
@@ -203,11 +233,13 @@ export function ProfileDrawer() {
             {/* Scrollable Content Area */}
             <div className="flex-1 overflow-y-auto pr-2 mt-4 space-y-4 max-h-[calc(100vh-200px)]">
               {message && (
-                <div className={`p-3 rounded-md text-sm ${
-                  message.includes('successfully') 
-                    ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800' 
-                    : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
-                }`}>
+                <div
+                  className={`p-3 rounded-md text-sm ${
+                    message.includes("successfully")
+                      ? "bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800"
+                      : "bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800"
+                  }`}
+                >
                   {message}
                 </div>
               )}
@@ -215,13 +247,13 @@ export function ProfileDrawer() {
               {/* Basic Information */}
               <div className="space-y-3">
                 <h3 className="text-lg font-medium">Basic Information</h3>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="name">Display Name</Label>
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
                     placeholder="Enter your name"
                   />
                 </div>
@@ -230,23 +262,26 @@ export function ProfileDrawer() {
                   <Label htmlFor="subdomain">Subdomain</Label>
                   <Input
                     id="subdomain"
-                    value={profile?.subdomain || ''}
+                    value={profile?.subdomain || ""}
                     disabled
                     className="bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
                   />
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Subdomain cannot be changed</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Subdomain cannot be changed
+                  </p>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="store-email">Store Email</Label>
                   <Input
                     id="store-email"
-                    value={profile?.storeEmail || 'Not set'}
+                    value={profile?.storeEmail || "Not set"}
                     disabled
                     className="bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Update store email in <button 
+                    Update store email in{" "}
+                    <button
                       onClick={() => setIsOpen(false)}
                       className="text-blue-600 dark:text-blue-400 hover:underline"
                     >
@@ -280,7 +315,9 @@ export function ProfileDrawer() {
                   <Input
                     id="username"
                     value={formData.username}
-                    onChange={(e) => handleInputChange('username', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("username", e.target.value)
+                    }
                     placeholder="Enter username"
                     disabled={!showPasswordSection}
                   />
@@ -294,7 +331,9 @@ export function ProfileDrawer() {
                         id="password"
                         type="password"
                         value={formData.password}
-                        onChange={(e) => handleInputChange('password', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("password", e.target.value)
+                        }
                         placeholder="Enter new password"
                       />
                     </div>
@@ -305,7 +344,9 @@ export function ProfileDrawer() {
                         id="confirmPassword"
                         type="password"
                         value={formData.confirmPassword}
-                        onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("confirmPassword", e.target.value)
+                        }
                         placeholder="Confirm new password"
                       />
                     </div>
@@ -314,8 +355,12 @@ export function ProfileDrawer() {
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        setShowPasswordSection(false)
-                        setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }))
+                        setShowPasswordSection(false);
+                        setFormData((prev) => ({
+                          ...prev,
+                          password: "",
+                          confirmPassword: "",
+                        }));
                       }}
                     >
                       Cancel
@@ -326,34 +371,57 @@ export function ProfileDrawer() {
             </div>
 
             {/* Fixed Action Buttons */}
-            <div className="flex-shrink-0 flex justify-end space-x-2 pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
+            <div className="flex-shrink-0 flex justify-between pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
               <Button
-                variant="outline"
-                onClick={() => setIsOpen(false)}
-                disabled={isSaving}
+                variant="destructive"
+                onClick={handleLogout}
+                className="flex items-center gap-2"
               >
-                Cancel
+                <LogOut className="h-4 w-4" />
+                Logout
               </Button>
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Changes
-                  </>
-                )}
-              </Button>
+
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsOpen(false)}
+                  disabled={isSaving}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleSave} disabled={isSaving}>
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Changes
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         )}
       </SheetContent>
     </Sheet>
-  )
+  );
 }
+
+// Create a client-only version to prevent hydration issues
+const ProfileDrawerClientOnly = dynamic(
+  () => Promise.resolve(ProfileDrawerComponent),
+  {
+    ssr: false,
+    loading: () => (
+      <Button variant="ghost" size="sm" disabled>
+        <User className="h-4 w-4" />
+      </Button>
+    ),
+  }
+);
+
+export { ProfileDrawerClientOnly as ProfileDrawer };

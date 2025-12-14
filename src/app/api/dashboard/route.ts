@@ -1,14 +1,31 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { calculateBookingStatus } from '@/lib/utils'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Get total customers count
-    const totalCustomers = await prisma.customer.count()
+    
+    // Get tenant ID from headers (added by middleware)
+    const tenantId = request.headers.get('X-Tenant-ID');
 
-    // Get all bookings to calculate status-based counts and monthly revenue
+    if (!tenantId) {
+      return NextResponse.json(
+        { error: 'Tenant information not available' },
+        { status: 400 }
+      );
+    }
+
+    const tenantIdNum = parseInt(tenantId);
+
+    // Get total customers count for this tenant
+    const totalCustomers = await prisma.customer.count({
+      where: { tenantId: tenantIdNum }
+    })
+
+    // Get all bookings for this tenant to calculate status-based counts and monthly revenue
+
     const allBookings = await prisma.booking.findMany({
+      where: { tenantId: tenantIdNum },
       include: {
         items: true
       }
@@ -19,18 +36,23 @@ export async function GET() {
     let completedBookings = 0
     let confirmedBookings = 0
 
-    allBookings.forEach(booking => {
-      const status = calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd)
-      switch (status) {
-        case 'active':
-          activeBookings++
-          break
-        case 'completed':
-          completedBookings++
-          break
-        case 'confirmed':
-          confirmedBookings++
-          break
+    allBookings.forEach((booking, index) => {
+      try {
+        const status = calculateBookingStatus(booking.startDate, booking.endDate, undefined, booking.rowStatusCd)
+       
+        switch (status) {
+          case 'active':
+            activeBookings++
+            break
+          case 'completed':
+            completedBookings++
+            break
+          case 'confirmed':
+            confirmedBookings++
+            break
+        }
+      } catch (statusError) {
+        console.error(`Dashboard API: Error calculating status for booking ${booking.id}:`, statusError);
       }
     })
 
@@ -45,15 +67,17 @@ export async function GET() {
         return bookingDate.getMonth() === currentMonth && 
                bookingDate.getFullYear() === currentYear
       })
-      .reduce((total, booking) => total + booking.totalAmount, 0)
+      .reduce((total, booking) => total + (booking.totalAmount || 0), 0)
 
-    return NextResponse.json({
+    const result = {
       totalCustomers,
       activeBookings,
       completedBookings,
       confirmedBookings,
       monthlyRevenue
-    })
+    };
+
+    return NextResponse.json(result)
   } catch (error) {
     console.error('Failed to fetch dashboard stats:', error)
     return NextResponse.json(

@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Navigation } from "@/components/navigation/navigation";
+import { ConditionalNavigation } from "@/components/navigation/conditional-navigation";
 import { ThemeProvider } from "@/components/ui/theme-provider-shadcn";
+import { AuthProvider } from "@/components/auth/auth-provider";
+import { AuthGuard } from "@/components/auth/auth-guard";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,17 +28,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          <Navigation />
-          <main className="min-h-screen">
-            {children}
-          </main>
+          <AuthProvider>
+            <ConditionalNavigation />
+            <main className="min-h-screen">{children}</main>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
