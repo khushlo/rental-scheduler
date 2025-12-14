@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { format, parseISO } from "date-fns";
 import { Calendar, List, Search, Filter } from "lucide-react";
 import { BookingDialog } from "../bookings/booking-dialog";
-import { fetchBookingsGlobal } from "@/lib/bookings-cache";
+
 
 interface BookingItem {
   id: number;
@@ -68,7 +68,16 @@ export function OrdersList({ selectedProductId, showAllItems }: OrdersListProps)
   const fetchBookings = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await fetchBookingsGlobal(selectedProductId, showAllItems);
+      let url = "/api/bookings";
+      if (!showAllItems && selectedProductId) {
+        url += `?productId=${selectedProductId}`;
+      }
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('Failed to fetch bookings');
+      }
+      const data = await response.json();
       setBookings(data);
     } catch (error) {
       console.error("Error fetching bookings:", error);

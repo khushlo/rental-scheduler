@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   format,
   startOfMonth,
@@ -21,7 +21,7 @@ import {
   ChevronRight,
   Calendar as CalendarIcon,
 } from "lucide-react";
-import { fetchBookingsGlobal } from "@/lib/bookings-cache";
+
 
 interface BookingItem {
   id: string;
@@ -67,25 +67,51 @@ export function CalendarView({ selectedProductId, showAllItems }: CalendarViewPr
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const fetchingRef = useRef(false);
 
   // Initialize date on client side only to prevent hydration mismatch
   useEffect(() => {
     setCurrentDate(new Date());
   }, []);
 
-  const fetchBookings = async () => {
-    try {
-      setLoading(true);
-      const data = await fetchBookingsGlobal(selectedProductId, showAllItems);
-      setBookings(data);
-    } catch (error) {
-      console.error("Error fetching bookings:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchBookings = async () => {
+      // Prevent concurrent requests
+      if (fetchingRef.current) {
+        console.log('🔒 Skipping duplicate fetch request');
+        return;
+      }
+
+      // Only fetch if showAllItems is true OR a specific product is selected
+      if (!showAllItems && !selectedProductId) {
+        setBookings([]);
+        return;
+      }
+
+      try {
+        fetchingRef.current = true;
+        setLoading(true);
+        
+        let url = "/api/bookings";
+        if (!showAllItems && selectedProductId) {
+          url += `?productId=${selectedProductId}`;
+        }
+        
+        console.log('📅 Fetching calendar bookings from:', url);
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error('Failed to fetch bookings');
+        }
+        const data = await response.json();
+        setBookings(data);
+      } catch (error) {
+        console.error("Error fetching bookings:", error);
+      } finally {
+        setLoading(false);
+        fetchingRef.current = false;
+      }
+    };
+
     fetchBookings();
   }, [selectedProductId, showAllItems]);
   if (!currentDate) {

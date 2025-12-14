@@ -7,7 +7,7 @@ import { DataGrid, Column } from "@/components/ui/data-grid";
 import { AddBookingForm } from "./add-booking-form";
 import { EditBookingForm } from "./edit-booking-form";
 import { DeleteBookingButton } from "./delete-booking-button";
-import { fetchBookingsGlobal } from "@/lib/bookings-cache";
+
 import {
   formatId,
   calculateBookingStatus,
@@ -340,7 +340,11 @@ export function BookingsDataGrid() {
       console.log('Fetching bookings using shared cache...');
       
       // Use shared cache with showAllItems=true to get all bookings
-      const data = await fetchBookingsGlobal(null, true);
+      const response = await fetch("/api/bookings");
+      if (!response.ok) {
+        throw new Error('Failed to fetch bookings');
+      }
+      const data = await response.json();
 
       // Filter bookings based on rowStatusCd
       const filteredData = data.filter((booking: Booking) => {
