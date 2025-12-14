@@ -281,7 +281,7 @@ export function CalendarView({ selectedProductId, showAllItems }: CalendarViewPr
                         if (selectedProductId) {
                           // Show quantity for selected product only
                           const selectedProductItems = booking.items.filter(item => 
-                            item.product.id == selectedProductId || item.product.id == selectedProductId.toString()
+                            Number(item.product.id) === Number(selectedProductId)
                           );
                           const totalQuantity = selectedProductItems.reduce((sum, item) => sum + item.quantity, 0);
                           const productName = selectedProductItems[0]?.product.name || 'Unknown Product';
@@ -336,7 +336,7 @@ export function CalendarView({ selectedProductId, showAllItems }: CalendarViewPr
                   if (selectedProductId) {
                     // Show only the selected product items
                     const selectedProductItems = booking.items.filter(item => 
-                      item.product.id == selectedProductId || item.product.id == selectedProductId.toString()
+                      Number(item.product.id) === Number(selectedProductId)
                     );
                     const totalQuantity = selectedProductItems.reduce((sum, item) => sum + item.quantity, 0);
                     const productName = selectedProductItems[0]?.product.name || 'Unknown Product';
