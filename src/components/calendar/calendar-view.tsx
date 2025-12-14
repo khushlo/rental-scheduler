@@ -21,6 +21,7 @@ import {
   ChevronRight,
   Calendar as CalendarIcon,
 } from "lucide-react";
+import { fetchBookingsGlobal } from "@/lib/bookings-cache";
 
 interface BookingItem {
   id: string;
@@ -56,7 +57,12 @@ interface CalendarDay {
   isCurrentMonth: boolean;
 }
 
-export function CalendarView() {
+interface CalendarViewProps {
+  selectedProductId?: number | null;
+  showAllItems: boolean;
+}
+
+export function CalendarView({ selectedProductId, showAllItems }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,11 +76,8 @@ export function CalendarView() {
   const fetchBookings = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/bookings");
-      if (response.ok) {
-        const data = await response.json();
-        setBookings(data);
-      }
+      const data = await fetchBookingsGlobal(selectedProductId, showAllItems);
+      setBookings(data);
     } catch (error) {
       console.error("Error fetching bookings:", error);
     } finally {
@@ -84,9 +87,7 @@ export function CalendarView() {
 
   useEffect(() => {
     fetchBookings();
-  }, []);
-
-  // Early return if date not initialized (prevents hydration issues)
+  }, [selectedProductId, showAllItems]);
   if (!currentDate) {
     return (
       <div className="flex items-center justify-center h-96">

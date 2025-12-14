@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { format, parseISO } from "date-fns";
 import { Calendar, List, Search, Filter } from "lucide-react";
 import { BookingDialog } from "../bookings/booking-dialog";
+import { fetchBookingsGlobal } from "@/lib/bookings-cache";
 
 interface BookingItem {
   id: number;
@@ -46,7 +47,12 @@ interface Booking {
   };
 }
 
-export function OrdersList() {
+interface OrdersListProps {
+  selectedProductId?: number | null;
+  showAllItems: boolean;
+}
+
+export function OrdersList({ selectedProductId, showAllItems }: OrdersListProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,17 +68,14 @@ export function OrdersList() {
   const fetchBookings = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/bookings");
-      if (response.ok) {
-        const data = await response.json();
-        setBookings(data);
-      }
+      const data = await fetchBookingsGlobal(selectedProductId, showAllItems);
+      setBookings(data);
     } catch (error) {
       console.error("Error fetching bookings:", error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showAllItems, selectedProductId]);
 
   const applyFiltersAndSort = useCallback(() => {
     let filtered = [...bookings];
