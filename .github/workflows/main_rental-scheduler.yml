@@ -175,4 +175,4 @@ jobs:
           app-name: "rental-scheduler"
           slot-name: "Production"
           package: .
-          startup-command: "npx prisma@6.19.0 generate && node server.js"
+          startup-command: "npx prisma@6.19.0 migrate deploy && npx prisma@6.19.0 generate && node server.js"
