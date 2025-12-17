@@ -105,6 +105,13 @@ jobs:
             ls -la deployment/node_modules/prisma-client/
           fi
 
+      - name: Rename .turbo to turbo-cache for artifact preservation
+        run: |
+          if [ -d "deployment/.turbo" ]; then
+            mv deployment/.turbo deployment/turbo-cache
+            echo "Renamed .turbo to turbo-cache for artifact upload"
+          fi
+
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
@@ -143,6 +150,11 @@ jobs:
             ls -la ./node_modules/.prisma/
           else
             echo "ERROR: prisma-client directory missing from downloaded artifact!"
+          fi
+          echo "=== Checking for turbo-cache directory ==="
+          if [ -d "./turbo-cache" ]; then
+            mv ./turbo-cache ./.turbo
+            echo "Renamed turbo-cache back to .turbo"
           fi
           echo "=== Final artifact contents after rename ==="
           ls -la ./
