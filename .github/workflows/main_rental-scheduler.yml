@@ -44,6 +44,14 @@ jobs:
           # Copy all standalone build content including .next directory
           cp -r .next/standalone/. deployment/
 
+          # Copy Prisma schema and migrations (CRITICAL!)
+          echo "=== Copying Prisma schema and migrations ==="
+          if [ -d "prisma" ]; then
+            cp -r prisma deployment/
+            echo "Copied prisma directory to deployment"
+            ls -la deployment/prisma/
+          fi
+
           # Copy the generated Prisma client (CRITICAL for Azure)
           echo "=== Copying Prisma client ==="
           if [ -d "node_modules/.prisma" ]; then
