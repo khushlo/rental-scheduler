@@ -5,7 +5,7 @@ import { generateToken } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password, tenantId } = await request.json();
+    const { username, password } = await request.json();
 
     // Validate required fields
     if (!username || !password) {
@@ -15,13 +15,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user by username and tenant
-    const user = await prisma.userLogin.findUnique({
+    // Find user by username to determine their tenant
+    // Note: This assumes usernames are unique across all tenants
+    // If not, you may need to make usernames globally unique
+    const user = await prisma.userLogin.findFirst({
       where: {
-        username_tenantId: {
-          username,
-          tenantId: tenantId || 1, // Default to tenant 1 if not provided
-        },
+        username,
       },
       include: {
         tenant: {

@@ -12,11 +12,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (
-    username: string,
-    password: string,
-    tenantId?: number
-  ) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
 }
@@ -56,8 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (
     username: string,
-    password: string,
-    tenantId: number = 1
+    password: string
   ): Promise<boolean> => {
     try {
       const response = await fetch("/api/auth/login", {
@@ -65,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ username, password, tenantId }),
+        body: JSON.stringify({ username, password }),
       });
 
       if (response.ok) {

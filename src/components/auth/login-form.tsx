@@ -8,11 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-interface LoginFormProps {
-  tenantId?: number;
-}
-
-export function LoginForm({ tenantId = 1 }: LoginFormProps) {
+export function LoginForm() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -26,7 +22,7 @@ export function LoginForm({ tenantId = 1 }: LoginFormProps) {
     setError("");
 
     try {
-      const success = await login(username, password, tenantId);
+      const success = await login(username, password);
 
       if (success) {
         // Login successful - redirect to dashboard
