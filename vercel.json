@@ -9,7 +9,7 @@
   "installCommand": "npm install && npx prisma generate",
   "git": {
     "deploymentEnabled": {
-      "main": false
+      "main": true
     }
   }
 }
