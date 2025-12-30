@@ -128,9 +128,15 @@ export default function DashboardContent() {
   }
 
   const formatCurrency = (amount: number) => {
+    if (!mounted) {
+      return `₹${amount.toFixed(2)}`; // Fallback during SSR
+    }
+    
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(amount);
   };
 

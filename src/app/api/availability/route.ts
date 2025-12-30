@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { calculateBookingStatus } from '@/lib/utils'
+import { withAuth } from '@/lib/api-auth'
 
 interface BookingWithItems {
   id: number
@@ -158,19 +159,20 @@ function checkAvailabilityUsingSweepLine(
 }
 
 export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const productId = searchParams.get('productId')
-    const startDate = searchParams.get('startDate')
-    const endDate = searchParams.get('endDate')
-    const startTime = searchParams.get('startTime')
-    const endTime = searchParams.get('endTime')
-    const quantity = searchParams.get('quantity')
-    const excludeBookingId = searchParams.get('excludeBookingId')
+  return withAuth(request, async (user) => {
+    try {
+      const { searchParams } = new URL(request.url)
+      const productId = searchParams.get('productId')
+      const startDate = searchParams.get('startDate')
+      const endDate = searchParams.get('endDate')
+      const startTime = searchParams.get('startTime')
+      const endTime = searchParams.get('endTime')
+      const quantity = searchParams.get('quantity')
+      const excludeBookingId = searchParams.get('excludeBookingId')
 
-    if (!productId || !startDate || !endDate) {
-      return NextResponse.json({ error: 'productId, startDate, and endDate are required' }, { status: 400 })
-    }
+      if (!productId || !startDate || !endDate) {
+        return NextResponse.json({ error: 'productId, startDate, and endDate are required' }, { status: 400 })
+      }
 
     // Validate time parameters - if one is provided, both should be provided
     if ((startTime && !endTime) || (!startTime && endTime)) {
@@ -217,9 +219,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Start date/time must be before end date/time' }, { status: 400 })
     }
 
-    // Get product details
+    // Get product details - ensure it belongs to user's tenant
     const product = await prisma.product.findUnique({
-      where: { id: numericProductId },
+      where: { 
+        id: numericProductId,
+        tenantId: user.tenantId
+      },
       select: { id: true, name: true, quantity: true, status: true, delayInHours: true }
     })
 
@@ -241,6 +246,7 @@ export async function GET(request: NextRequest) {
     // Enhanced to check individual item timing when available
     const potentiallyOverlappingBookings = await prisma.booking.findMany({
       where: {
+        tenantId: user.tenantId, // Filter by tenant
         // Exclude the current booking if editing
         ...(numericExcludeBookingId && {
           id: {
@@ -493,16 +499,18 @@ export async function GET(request: NextRequest) {
     console.error('Availability check error:', error)
     return NextResponse.json({ error: 'Failed to check availability' }, { status: 500 })
   }
+  });
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const { checks } = body
+  return withAuth(request, async (user) => {
+    try {
+      const body = await request.json()
+      const { checks } = body
 
-    if (!Array.isArray(checks)) {
-      return NextResponse.json({ error: 'checks must be an array' }, { status: 400 })
-    }
+      if (!Array.isArray(checks)) {
+        return NextResponse.json({ error: 'checks must be an array' }, { status: 400 })
+      }
 
     const results = await Promise.all(
       checks.map(async (check: any) => {
@@ -545,7 +553,10 @@ export async function POST(request: NextRequest) {
           }
 
           const product = await prisma.product.findUnique({
-            where: { id: productId },
+            where: { 
+              id: productId,
+              tenantId: user.tenantId
+            },
             select: { id: true, name: true, quantity: true, status: true, delayInHours: true }
           }) as any // Use type casting until Prisma regeneration is fixed
 
@@ -559,6 +570,7 @@ export async function POST(request: NextRequest) {
 
           const overlappingBookings = await prisma.booking.findMany({
             where: {
+              tenantId: user.tenantId, // Filter by tenant
               items: { some: { productId } },
               AND: [
                 { startDate: { lte: end } },
@@ -698,4 +710,5 @@ export async function POST(request: NextRequest) {
     console.error('Bulk availability check error:', error)
     return NextResponse.json({ error: 'Failed to perform bulk availability check' }, { status: 500 })
   }
+  });
 }

@@ -11,6 +11,7 @@ import { DeleteBookingButton } from "./delete-booking-button";
 import {
   formatId,
   calculateBookingStatus,
+  safeCalculateBookingStatus,
   getBookingStatusColor,
   safeFormatDate,
   type BookingStatus,
@@ -158,12 +159,14 @@ export function BookingsDataGrid() {
             items: [customItem], // Only this custom timing item
             totalAmount: customItem.subtotal, // Use item's subtotal
             // Calculate status based on custom timing dates
-            status: calculateBookingStatus(
-              customStartDate,
-              customEndDate,
-              booking.status === "cancelled",
-              booking.rowStatusCd
-            ),
+            status:
+              safeCalculateBookingStatus(
+                customStartDate,
+                customEndDate,
+                booking.status === "cancelled",
+                booking.rowStatusCd,
+                isMounted
+              ) || booking.status, // Fallback to existing status during SSR
             // Add a flag to identify this as a custom timing entry
             isCustomTimingEntry: true,
             originalBookingId: booking.id,
@@ -182,12 +185,14 @@ export function BookingsDataGrid() {
             0
           ),
           // Recalculate status for regular items too, in case original was incorrect
-          status: calculateBookingStatus(
-            booking.startDate,
-            booking.endDate,
-            booking.status === "cancelled",
-            booking.rowStatusCd
-          ),
+          status:
+            safeCalculateBookingStatus(
+              booking.startDate,
+              booking.endDate,
+              booking.status === "cancelled",
+              booking.rowStatusCd,
+              isMounted
+            ) || booking.status, // Fallback to existing status during SSR
           // Add a flag to identify this as a regular entry
           isCustomTimingEntry: false,
           originalBookingId: booking.id,
@@ -213,7 +218,6 @@ export function BookingsDataGrid() {
     const searchLower = searchTerm.toLowerCase();
 
     return bookings.filter((booking) => {
-
       // Search in booking ID (formatted)
       if (formatId(booking.id).toLowerCase().includes(searchLower)) {
         return true;
@@ -322,7 +326,7 @@ export function BookingsDataGrid() {
   // Refetch when completed bookings toggle changes (after initial mount)
   useEffect(() => {
     if (hasFetchedInitially.current) {
-      console.log('Toggle changed, refetching...');
+      console.log("Toggle changed, refetching...");
       fetchBookings();
     }
   }, [showCompletedBookings]);
@@ -330,19 +334,19 @@ export function BookingsDataGrid() {
   const fetchBookings = async () => {
     // Prevent concurrent calls
     if (fetchingRef.current) {
-      console.log('Fetch already in progress, skipping...');
+      console.log("Fetch already in progress, skipping...");
       return;
     }
 
     try {
       fetchingRef.current = true;
       setLoading(true);
-      console.log('Fetching bookings using shared cache...');
-      
+      console.log("Fetching bookings using shared cache...");
+
       // Use shared cache with showAllItems=true to get all bookings
       const response = await fetch("/api/bookings");
       if (!response.ok) {
-        throw new Error('Failed to fetch bookings');
+        throw new Error("Failed to fetch bookings");
       }
       const data = await response.json();
 

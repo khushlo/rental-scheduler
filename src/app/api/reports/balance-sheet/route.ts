@@ -1,53 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/api-auth';
 
 export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const year = searchParams.get('year') || '2025-26';
+  return withAuth(request, async (user) => {
+    try {
+      const { searchParams } = new URL(request.url);
+      const year = searchParams.get('year') || '2025-26';
 
-    // Parse the financial year to get start and end dates
-    const [startYear, endYear] = year.split('-');
-    
-    // Convert 2-digit year to full year (e.g., "25" -> "2025")
-    const fullStartYear = startYear.length === 2 ? `20${startYear}` : startYear;
-    const fullEndYear = endYear.length === 2 ? `20${endYear}` : endYear;
-    
-    // Financial year runs from April 1st to March 31st
-    const startDate = new Date(`${fullStartYear}-04-01T00:00:00.000Z`);
-    const endDate = new Date(`${fullEndYear}-03-31T23:59:59.999Z`);
+      // Parse the financial year to get start and end dates
+      const [startYear, endYear] = year.split('-');
+      
+      // Convert 2-digit year to full year (e.g., "25" -> "2025")
+      const fullStartYear = startYear.length === 2 ? `20${startYear}` : startYear;
+      const fullEndYear = endYear.length === 2 ? `20${endYear}` : endYear;
+      
+      // Financial year runs from April 1st to March 31st
+      const startDate = new Date(`${fullStartYear}-04-01T00:00:00.000Z`);
+      const endDate = new Date(`${fullEndYear}-03-31T23:59:59.999Z`);
 
-    console.log(`Fetching balance sheet for FY ${year}:`, {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString()
-    });
+      console.log(`Fetching balance sheet for FY ${year}:`, {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString()
+      });
 
-    // Fetch all bookings for the financial year
-    const bookings = await prisma.booking.findMany({
-      where: {
-        OR: [
-          // Bookings that start within the financial year
-          {
-            startDate: {
-              gte: startDate,
-              lte: endDate,
+      // Fetch all bookings for the financial year - filtered by tenant
+      const bookings = await prisma.booking.findMany({
+        where: {
+          tenantId: user.tenantId, // Filter by authenticated user's tenant
+          OR: [
+            // Bookings that start within the financial year
+            {
+              startDate: {
+                gte: startDate,
+                lte: endDate,
+              },
             },
-          },
-          // Bookings that end within the financial year
-          {
-            endDate: {
-              gte: startDate,
-              lte: endDate,
+            // Bookings that end within the financial year
+            {
+              endDate: {
+                gte: startDate,
+                lte: endDate,
+              },
             },
-          },
-          // Bookings that span across the entire financial year
-          {
-            AND: [
-              { startDate: { lte: startDate } },
-              { endDate: { gte: endDate } },
-            ],
-          },
-        ],
+            // Bookings that span across the entire financial year
+            {
+              AND: [
+                { startDate: { lte: startDate } },
+                { endDate: { gte: endDate } },
+              ],
+            },
+          ],
       },
       include: {
         customer: true,
@@ -139,14 +142,15 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json(balanceSheet);
-  } catch (error) {
-    console.error('Error generating balance sheet:', error);
-    return NextResponse.json(
-      { 
-        error: 'Failed to generate balance sheet',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
-  }
+    } catch (error) {
+      console.error('Error generating balance sheet:', error);
+      return NextResponse.json(
+        { 
+          error: 'Failed to generate balance sheet',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        },
+        { status: 500 }
+      );
+    }
+  });
 }

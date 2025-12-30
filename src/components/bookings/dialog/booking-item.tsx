@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { X, Package, MessageSquare, Clock } from "lucide-react";
 
 interface Product {
@@ -77,6 +77,12 @@ export function BookingItemComponent({
   onShowAddProduct,
 }: BookingItemComponentProps) {
   const productDropdownRef = useRef<HTMLDivElement>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Ensure component is mounted on client side to prevent hydration issues
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const hasNoteContent = item.notes && item.notes.trim().length > 0;
 
@@ -177,12 +183,14 @@ export function BookingItemComponent({
                           (booking, bookingIndex) => {
                             // Format dates for display (avoid hydration issues)
                             const formatDate = (dateStr: string) => {
+                              if (!isMounted) return dateStr; // Return raw string during SSR
                               const date = new Date(dateStr);
                               // Always show year to avoid hydration mismatch
                               return date.toLocaleDateString("en-US", {
                                 month: "short",
                                 day: "numeric",
                                 year: "numeric",
+                                timeZone: "UTC", // Use UTC for consistency
                               });
                             };
 

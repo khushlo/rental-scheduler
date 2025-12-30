@@ -1,20 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getTenantFromRequest } from '@/lib/tenant'
+import { withAuth } from '@/lib/api-auth'
 
 export async function GET(request: NextRequest) {
-  try {
-    const tenantContext = getTenantFromRequest(request)
-    
-    // Get all active configurations from master with their values for the current tenant
-    const configurations = await prisma.configMaster.findMany({
-      where: {
-        rowStatusCd: 'A', // Only active configurations
-      },
-      include: {
-        configDetails: {
+  return withAuth(request, async (user) => {
+    try {
+      // Get all active configurations from master with their values for the current tenant
+      const configurations = await prisma.configMaster.findMany({
+        where: {
+          rowStatusCd: 'A', // Only active configurations
+        },
+        include: {
+          configDetails: {
           where: {
-            tenantId: tenantContext.tenantId
+            tenantId: user.tenantId
           }
         }
       },
@@ -35,88 +34,90 @@ export async function GET(request: NextRequest) {
     }))
 
     return NextResponse.json(configsWithValues)
-  } catch (error) {
-    console.error('Failed to fetch configurations:', error)
-    return NextResponse.json({ error: 'Failed to fetch configurations' }, { status: 500 })
-  }
+    } catch (error) {
+      console.error('Failed to fetch configurations:', error)
+      return NextResponse.json({ error: 'Failed to fetch configurations' }, { status: 500 })
+    }
+  });
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const tenantContext = getTenantFromRequest(request)
-    
-    // Validate required fields for creating a tenant configuration value
-    if (!body.configId || typeof body.configId !== 'number') {
-      return NextResponse.json({ error: 'Configuration ID is required' }, { status: 400 })
-    }
-
-    if (!body.value || typeof body.value !== 'string') {
-      return NextResponse.json({ error: 'Configuration value is required' }, { status: 400 })
-    }
-
-    // Check if configuration master exists
-    const configMaster = await prisma.configMaster.findFirst({
-      where: { 
-        id: body.configId,
-        rowStatusCd: 'A'
+  return withAuth(request, async (user) => {
+    try {
+      const body = await request.json()
+      
+      // Validate required fields for creating a tenant configuration value
+      if (!body.configId || typeof body.configId !== 'number') {
+        return NextResponse.json({ error: 'Configuration ID is required' }, { status: 400 })
       }
-    })
 
-    if (!configMaster) {
-      return NextResponse.json({ error: 'Configuration not found or inactive' }, { status: 404 })
-    }
-
-    // Check if this tenant already has a value for this configuration
-    const existingDetail = await prisma.configDetails.findFirst({
-      where: {
-        configId: body.configId,
-        tenantId: tenantContext.tenantId
+      if (!body.value || typeof body.value !== 'string') {
+        return NextResponse.json({ error: 'Configuration value is required' }, { status: 400 })
       }
-    })
 
-    if (existingDetail) {
-      return NextResponse.json({ error: 'Configuration already set for this tenant' }, { status: 400 })
-    }
+      // Check if configuration master exists
+      const configMaster = await prisma.configMaster.findFirst({
+        where: { 
+          id: body.configId,
+          rowStatusCd: 'A'
+        }
+      })
 
-    // Create the config detail for the current tenant
-    const configDetail = await prisma.configDetails.create({
-      data: {
-        configId: body.configId,
-        tenantId: tenantContext.tenantId,
-        value: body.value,
-        modifiedBy: body.modifiedBy || 'System'
-      },
-      include: {
-        configMaster: true
+      if (!configMaster) {
+        return NextResponse.json({ error: 'Configuration not found or inactive' }, { status: 404 })
       }
-    })
 
-    return NextResponse.json({
-      id: configMaster.id,
-      configName: configMaster.configName,
-      description: configMaster.description,
-      rowStatusCd: configMaster.rowStatusCd,
-      createdAt: configMaster.createdAt,
-      updatedAt: configMaster.updatedAt,
-      modifiedBy: configMaster.modifiedBy,
-      value: configDetail.value,
-      hasValue: true
-    }, { status: 201 })
-  } catch (error) {
-    console.error('Failed to create configuration:', error)
-    return NextResponse.json({ error: 'Failed to create configuration' }, { status: 500 })
-  }
+      // Check if this tenant already has a value for this configuration
+      const existingDetail = await prisma.configDetails.findFirst({
+        where: {
+          configId: body.configId,
+          tenantId: user.tenantId
+        }
+      })
+
+      if (existingDetail) {
+        return NextResponse.json({ error: 'Configuration already set for this tenant' }, { status: 400 })
+      }
+
+      // Create the config detail for the current tenant
+      const configDetail = await prisma.configDetails.create({
+        data: {
+          configId: body.configId,
+          tenantId: user.tenantId,
+          value: body.value,
+          modifiedBy: body.modifiedBy || 'System'
+        },
+        include: {
+          configMaster: true
+        }
+      })
+
+      return NextResponse.json({
+        id: configMaster.id,
+        configName: configMaster.configName,
+        description: configMaster.description,
+        rowStatusCd: configMaster.rowStatusCd,
+        createdAt: configMaster.createdAt,
+        updatedAt: configMaster.updatedAt,
+        modifiedBy: configMaster.modifiedBy,
+        value: configDetail.value,
+        hasValue: true
+      }, { status: 201 })
+    } catch (error) {
+      console.error('Failed to create configuration:', error)
+      return NextResponse.json({ error: 'Failed to create configuration' }, { status: 500 })
+    }
+  });
 }
 
 export async function PUT(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const tenantContext = getTenantFromRequest(request)
-    
-    if (!body.configId || typeof body.configId !== 'number') {
-      return NextResponse.json({ error: 'Configuration ID is required' }, { status: 400 })
-    }
+  return withAuth(request, async (user) => {
+    try {
+      const body = await request.json()
+      
+      if (!body.configId || typeof body.configId !== 'number') {
+        return NextResponse.json({ error: 'Configuration ID is required' }, { status: 400 })
+      }
 
     // Check if the configuration exists
     const config = await prisma.configMaster.findUnique({
@@ -132,7 +133,7 @@ export async function PUT(request: NextRequest) {
       where: {
         configId_tenantId: {
           configId: body.configId,
-          tenantId: tenantContext.tenantId
+          tenantId: user.tenantId
         }
       }
     })
@@ -152,15 +153,16 @@ export async function PUT(request: NextRequest) {
       const newDetail = await prisma.configDetails.create({
         data: {
           configId: body.configId,
-          tenantId: tenantContext.tenantId,
+          tenantId: user.tenantId,
           value: body.value,
           modifiedBy: body.modifiedBy || 'System'
         }
       })
       return NextResponse.json(newDetail, { status: 201 })
     }
-  } catch (error) {
-    console.error('Failed to update configuration:', error)
-    return NextResponse.json({ error: 'Failed to update configuration' }, { status: 500 })
-  }
+    } catch (error) {
+      console.error('Failed to update configuration:', error)
+      return NextResponse.json({ error: 'Failed to update configuration' }, { status: 500 })
+    }
+  });
 }

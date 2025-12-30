@@ -27,14 +27,16 @@ export function calculateBookingStatus(
   startDate: string | Date,
   endDate: string | Date,
   cancelled?: boolean,
-  rowStatusCd?: string
+  rowStatusCd?: string,
+  currentTime?: Date // Allow passing current time to make it hydration-safe
 ): BookingStatus {
   if (cancelled) return 'cancelled';
   
   // If rowStatusCd is 'C' (Completed), return completed regardless of date logic
   if (rowStatusCd === 'C') return 'completed';
   
-  const now = new Date();
+  // Use provided currentTime or fall back to new Date() for API usage
+  const now = currentTime || new Date();
   const start = typeof startDate === 'string' ? new Date(startDate) : startDate;
   
   // Calculate days difference between start date and current date
@@ -111,10 +113,12 @@ export function getRowStatusInfo(statusCd?: RowStatusCode): { label: string; col
 // Utility functions
 export function formatDate(date: string | Date): string {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
+  // Use a consistent format to prevent hydration mismatches
   return dateObj.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
-    day: 'numeric'
+    day: 'numeric',
+    timeZone: 'UTC' // Use UTC to ensure consistency
   });
 }
 
@@ -135,10 +139,29 @@ export function safeFormatDate(
 }
 
 export function formatCurrency(amount: number): string {
+  // Use a consistent locale and ensure same formatting on server/client
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
-    currency: 'INR'
+    currency: 'INR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   }).format(amount);
+}
+
+/**
+ * Hydration-safe booking status calculation for client components
+ * Returns null during SSR to prevent hydration mismatches
+ */
+export function safeCalculateBookingStatus(
+  startDate: string | Date,
+  endDate: string | Date,
+  cancelled?: boolean,
+  rowStatusCd?: string,
+  isMounted: boolean = true
+): BookingStatus | null {
+  if (!isMounted) return null; // Return null during SSR
+  
+  return calculateBookingStatus(startDate, endDate, cancelled, rowStatusCd);
 }
 
 export function formatTime(time: string): string {

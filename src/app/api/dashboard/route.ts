@@ -1,21 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { calculateBookingStatus } from '@/lib/utils'
+import { withAuth } from '@/lib/api-auth'
 
 export async function GET(request: NextRequest) {
-  try {
-    
-    // Get tenant ID from headers (added by middleware)
-    const tenantId = request.headers.get('X-Tenant-ID');
-
-    if (!tenantId) {
-      return NextResponse.json(
-        { error: 'Tenant information not available' },
-        { status: 400 }
-      );
-    }
-
-    const tenantIdNum = parseInt(tenantId);
+  return withAuth(request, async (user) => {
+    try {
+      // Get tenant ID from authenticated user
+      const tenantIdNum = user.tenantId;
 
     // Get total customers count for this tenant
     const totalCustomers = await prisma.customer.count({
@@ -56,16 +48,16 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Calculate monthly revenue (current month)
+    // Calculate monthly revenue (current month) - using UTC to prevent hydration mismatches
     const now = new Date()
-    const currentMonth = now.getMonth()
-    const currentYear = now.getFullYear()
+    const currentMonth = now.getUTCMonth()
+    const currentYear = now.getUTCFullYear()
     
     const monthlyRevenue = allBookings
       .filter(booking => {
         const bookingDate = new Date(booking.startDate)
-        return bookingDate.getMonth() === currentMonth && 
-               bookingDate.getFullYear() === currentYear
+        return bookingDate.getUTCMonth() === currentMonth && 
+               bookingDate.getUTCFullYear() === currentYear
       })
       .reduce((total, booking) => total + (booking.totalAmount || 0), 0)
 
@@ -85,4 +77,5 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
+  });
 }
