@@ -1,8 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { ArrowLeft, Download, Calendar, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import {
+  ArrowLeft,
+  Download,
+  Calendar,
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+} from "lucide-react";
+import { apiGet } from "@/lib/api-client";
 
 interface BalanceSheetData {
   financialYear: string;
@@ -22,31 +30,53 @@ interface BalanceSheetData {
 }
 
 const FINANCIAL_YEARS = [
-  { value: '2025-26', label: '2025-26', startDate: '2025-04-01', endDate: '2026-03-31' },
-  { value: '2024-25', label: '2024-25', startDate: '2024-04-01', endDate: '2025-03-31' },
-  { value: '2023-24', label: '2023-24', startDate: '2023-04-01', endDate: '2024-03-31' },
-  { value: '2022-23', label: '2022-23', startDate: '2022-04-01', endDate: '2023-03-31' },
+  {
+    value: "2025-26",
+    label: "2025-26",
+    startDate: "2025-04-01",
+    endDate: "2026-03-31",
+  },
+  {
+    value: "2024-25",
+    label: "2024-25",
+    startDate: "2024-04-01",
+    endDate: "2025-03-31",
+  },
+  {
+    value: "2023-24",
+    label: "2023-24",
+    startDate: "2023-04-01",
+    endDate: "2024-03-31",
+  },
+  {
+    value: "2022-23",
+    label: "2022-23",
+    startDate: "2022-04-01",
+    endDate: "2023-03-31",
+  },
 ];
 
 export default function BalanceSheetPage() {
-  const [selectedYear, setSelectedYear] = useState('2025-26');
-  const [balanceSheet, setBalanceSheet] = useState<BalanceSheetData | null>(null);
+  const [selectedYear, setSelectedYear] = useState("2025-26");
+  const [balanceSheet, setBalanceSheet] = useState<BalanceSheetData | null>(
+    null
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchBalanceSheet = async (year: string) => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      const response = await fetch(`/api/reports/balance-sheet?year=${year}`);
+      const response = await apiGet(`/api/reports/balance-sheet?year=${year}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch balance sheet data');
+        throw new Error("Failed to fetch balance sheet data");
       }
       const data = await response.json();
       setBalanceSheet(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -58,33 +88,35 @@ export default function BalanceSheetPage() {
 
   const downloadReport = () => {
     if (!balanceSheet) return;
-    
+
     // Create CSV content
     const csvContent = [
-      ['Balance Sheet Report', balanceSheet.financialYear],
-      [''],
-      ['Summary'],
-      ['Total Revenue', balanceSheet.totalRevenue],
-      ['Total Advance Received', balanceSheet.totalAdvanceReceived],
-      ['Pending Payments', balanceSheet.pendingPayments],
-      ['Total Bookings', balanceSheet.totalBookings],
-      ['Completed Bookings', balanceSheet.completedBookings],
-      ['Active Bookings', balanceSheet.activeBookings],
-      ['Upcoming Bookings', balanceSheet.upcomingBookings],
-      [''],
-      ['Monthly Breakdown'],
-      ['Month', 'Revenue', 'Bookings', 'Advance'],
-      ...balanceSheet.monthlyBreakdown.map(month => [
+      ["Balance Sheet Report", balanceSheet.financialYear],
+      [""],
+      ["Summary"],
+      ["Total Revenue", balanceSheet.totalRevenue],
+      ["Total Advance Received", balanceSheet.totalAdvanceReceived],
+      ["Pending Payments", balanceSheet.pendingPayments],
+      ["Total Bookings", balanceSheet.totalBookings],
+      ["Completed Bookings", balanceSheet.completedBookings],
+      ["Active Bookings", balanceSheet.activeBookings],
+      ["Upcoming Bookings", balanceSheet.upcomingBookings],
+      [""],
+      ["Monthly Breakdown"],
+      ["Month", "Revenue", "Bookings", "Advance"],
+      ...balanceSheet.monthlyBreakdown.map((month) => [
         month.month,
         month.revenue,
         month.bookings,
-        month.advance
-      ])
-    ].map(row => row.join(',')).join('\n');
+        month.advance,
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n");
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `balance-sheet-${balanceSheet.financialYear}.csv`;
     a.click();
@@ -96,20 +128,22 @@ export default function BalanceSheetPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link 
+          <Link
             href="/reports"
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Balance Sheet</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+              Balance Sheet
+            </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
               Financial overview and analysis for the selected financial year
             </p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3">
           {/* Financial Year Selector */}
           <select
@@ -123,7 +157,7 @@ export default function BalanceSheetPage() {
               </option>
             ))}
           </select>
-          
+
           {/* Download Button */}
           <button
             onClick={downloadReport}
@@ -139,7 +173,9 @@ export default function BalanceSheetPage() {
       {loading && (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-2 text-gray-600 dark:text-gray-400">Loading balance sheet...</span>
+          <span className="ml-2 text-gray-600 dark:text-gray-400">
+            Loading balance sheet...
+          </span>
         </div>
       )}
 
@@ -161,7 +197,8 @@ export default function BalanceSheetPage() {
                     No bookings found for FY {balanceSheet.financialYear}
                   </h3>
                   <p className="text-blue-600 dark:text-blue-400 mt-1">
-                    There are no bookings in the selected financial year. The balance sheet will show zero values.
+                    There are no bookings in the selected financial year. The
+                    balance sheet will show zero values.
                   </p>
                 </div>
               </div>
@@ -173,7 +210,9 @@ export default function BalanceSheetPage() {
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Total Revenue</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">
+                    Total Revenue
+                  </p>
                   <p className="text-2xl font-bold text-green-600">
                     ₹{balanceSheet.totalRevenue.toLocaleString()}
                   </p>
@@ -185,7 +224,9 @@ export default function BalanceSheetPage() {
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Advance Received</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">
+                    Advance Received
+                  </p>
                   <p className="text-2xl font-bold text-blue-600">
                     ₹{balanceSheet.totalAdvanceReceived.toLocaleString()}
                   </p>
@@ -197,7 +238,9 @@ export default function BalanceSheetPage() {
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Pending Payments</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">
+                    Pending Payments
+                  </p>
                   <p className="text-2xl font-bold text-orange-600">
                     ₹{balanceSheet.pendingPayments.toLocaleString()}
                   </p>
@@ -209,7 +252,9 @@ export default function BalanceSheetPage() {
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Total Bookings</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">
+                    Total Bookings
+                  </p>
                   <p className="text-2xl font-bold text-purple-600">
                     {balanceSheet.totalBookings}
                   </p>
@@ -226,15 +271,21 @@ export default function BalanceSheetPage() {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <h3 className="text-2xl font-bold text-green-600">{balanceSheet.completedBookings}</h3>
+                <h3 className="text-2xl font-bold text-green-600">
+                  {balanceSheet.completedBookings}
+                </h3>
                 <p className="text-green-600 text-sm">Completed Bookings</p>
               </div>
               <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <h3 className="text-2xl font-bold text-blue-600">{balanceSheet.activeBookings}</h3>
+                <h3 className="text-2xl font-bold text-blue-600">
+                  {balanceSheet.activeBookings}
+                </h3>
                 <p className="text-blue-600 text-sm">Active Bookings</p>
               </div>
               <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                <h3 className="text-2xl font-bold text-orange-600">{balanceSheet.upcomingBookings}</h3>
+                <h3 className="text-2xl font-bold text-orange-600">
+                  {balanceSheet.upcomingBookings}
+                </h3>
                 <p className="text-orange-600 text-sm">Upcoming Bookings</p>
               </div>
             </div>
@@ -249,19 +300,29 @@ export default function BalanceSheetPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Month</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Revenue</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Bookings</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Advance</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+                      Month
+                    </th>
+                    <th className="text-right py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+                      Revenue
+                    </th>
+                    <th className="text-right py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+                      Bookings
+                    </th>
+                    <th className="text-right py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+                      Advance
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {balanceSheet.monthlyBreakdown.map((month, index) => (
-                    <tr 
+                    <tr
                       key={month.month}
                       className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                     >
-                      <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{month.month}</td>
+                      <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                        {month.month}
+                      </td>
                       <td className="py-3 px-4 text-right text-gray-900 dark:text-gray-100">
                         ₹{month.revenue.toLocaleString()}
                       </td>

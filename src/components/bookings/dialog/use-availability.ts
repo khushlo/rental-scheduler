@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
+import { apiGet } from '@/lib/api-client';
 
 interface AvailabilityError {
   message: string;
@@ -75,7 +76,7 @@ export function useAvailability({ formData, excludeBookingId }: UseAvailabilityP
         params.append('excludeBookingId', excludeBookingId.toString());
       }
 
-      const response = await fetch(`/api/availability?${params}`);
+      const response = await apiGet(`/api/availability?${params}`);
       const data = await response.json();
 
       if (!data.available) {

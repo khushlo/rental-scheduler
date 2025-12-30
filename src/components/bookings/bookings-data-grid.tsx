@@ -7,6 +7,7 @@ import { DataGrid, Column } from "@/components/ui/data-grid";
 import { AddBookingForm } from "./add-booking-form";
 import { EditBookingForm } from "./edit-booking-form";
 import { DeleteBookingButton } from "./delete-booking-button";
+import { apiGet, apiPut } from "@/lib/api-client";
 
 import {
   formatId,
@@ -344,7 +345,7 @@ export function BookingsDataGrid() {
       console.log("Fetching bookings using shared cache...");
 
       // Use shared cache with showAllItems=true to get all bookings
-      const response = await fetch("/api/bookings");
+      const response = await apiGet("/api/bookings");
       if (!response.ok) {
         throw new Error("Failed to fetch bookings");
       }
@@ -378,7 +379,7 @@ export function BookingsDataGrid() {
       setUpdatingStatusId(bookingId);
 
       // First get the current booking data
-      const fetchResponse = await fetch(`/api/bookings/${bookingId}`);
+      const fetchResponse = await apiGet(`/api/bookings/${bookingId}`);
       if (!fetchResponse.ok) {
         console.error("Failed to fetch booking data");
         return;
@@ -387,15 +388,9 @@ export function BookingsDataGrid() {
       const bookingData = await fetchResponse.json();
 
       // Update the booking with the completed status
-      const response = await fetch(`/api/bookings/${bookingId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...bookingData,
-          rowStatusCd: "C",
-        }),
+      const response = await apiPut(`/api/bookings/${bookingId}`, {
+        ...bookingData,
+        statusCd: "C", // Set status to Completed
       });
 
       if (response.ok) {

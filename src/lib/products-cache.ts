@@ -1,55 +1,87 @@
 // Shared products cache to prevent duplicate API calls across components
 
-// Module-level cache for products
-let productsCache: any[] | null = null;
-let productsFetchPromise: Promise<any[]> | null = null;
+import { apiGet } from '@/lib/api-client';
 
-// Global fetch function with caching
+// Module-level cache for products - now tenant-aware
+let productsCache: { [tenantId: number]: any[] } = {};
+let productsFetchPromises: { [tenantId: number]: Promise<any[]> } = {};
+
+// Helper function to get current tenant ID from user session
+const getCurrentTenantId = async (): Promise<number | null> => {
+  try {
+    const response = await apiGet('/api/auth/verify');
+    if (response.ok) {
+      const data = await response.json();
+      return data.user?.tenantId || null;
+    }
+  } catch (error) {
+    console.error('Failed to get current tenant ID:', error);
+  }
+  return null;
+};
+
+// Global fetch function with tenant-aware caching
 export const fetchProductsGlobal = async (): Promise<any[]> => {
-  // Return cached data if available
-  if (productsCache) {
-    console.log('📦 Using cached products');
-    return productsCache;
+  const tenantId = await getCurrentTenantId();
+  
+  if (!tenantId) {
+    throw new Error('Unable to determine current tenant');
   }
 
-  // Return existing promise if fetch is in progress
-  if (productsFetchPromise) {
-    console.log('⏳ Waiting for existing products fetch');
-    return productsFetchPromise;
+  // Return cached data if available for this tenant
+  if (productsCache[tenantId]) {
+    console.log(`📦 Using cached products for tenant ${tenantId}`);
+    return productsCache[tenantId];
   }
 
-  // Create new fetch promise
-  productsFetchPromise = (async () => {
-    console.log('🔄 Fetching products from API...');
-    const response = await fetch('/api/products');
+  // Return existing promise if fetch is in progress for this tenant
+  if (productsFetchPromises[tenantId]) {
+    console.log(`⏳ Waiting for existing products fetch for tenant ${tenantId}`);
+    return productsFetchPromises[tenantId];
+  }
+
+  // Create new fetch promise for this tenant
+  productsFetchPromises[tenantId] = (async () => {
+    console.log(`🔄 Fetching products from API for tenant ${tenantId}...`);
+    const response = await apiGet('/api/products');
     if (response.ok) {
       const data = await response.json();
       const activeProducts = data.filter((product: any) => product.status);
-      productsCache = activeProducts; // Cache the result
-      console.log('✅ Products fetched and cached:', activeProducts.length);
+      productsCache[tenantId] = activeProducts; // Cache the result for this tenant
+      console.log(`✅ Products fetched and cached for tenant ${tenantId}:`, activeProducts.length);
       return activeProducts;
     }
     throw new Error('Failed to fetch products');
   })();
 
   try {
-    const result = await productsFetchPromise;
+    const result = await productsFetchPromises[tenantId];
     return result;
   } catch (error) {
     // Reset promise on error so it can be retried
-    productsFetchPromise = null;
+    delete productsFetchPromises[tenantId];
     throw error;
   } finally {
     // Clear the promise after completion
-    productsFetchPromise = null;
+    delete productsFetchPromises[tenantId];
   }
 };
 
-// Function to clear cache (useful when products are added/updated)
-export const clearProductsCache = () => {
-  productsCache = null;
-  productsFetchPromise = null;
-  console.log('🗑️ Products cache cleared');
+// Function to clear cache for current tenant (useful when products are added/updated)
+export const clearProductsCache = async () => {
+  const tenantId = await getCurrentTenantId();
+  if (tenantId) {
+    delete productsCache[tenantId];
+    delete productsFetchPromises[tenantId];
+    console.log(`🗑️ Cleared products cache for tenant ${tenantId}`);
+  }
+};
+
+// Function to clear all caches (useful when switching tenants)
+export const clearAllProductsCache = () => {
+  productsCache = {};
+  productsFetchPromises = {};
+  console.log('🗑️ All products cache cleared');
 };
 
 // Function to update cache with new product data

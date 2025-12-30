@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Trash2, X } from "lucide-react";
+import { apiDelete } from "@/lib/api-client";
 
 interface Customer {
   id: number;
@@ -52,9 +53,7 @@ export function DeleteBookingButton({
 
   const performDelete = async () => {
     try {
-      const response = await fetch(`/api/bookings/${booking.id}`, {
-        method: "DELETE",
-      });
+      const response = await apiDelete(`/api/bookings/${booking.id}`);
 
       const data = await response.json();
 

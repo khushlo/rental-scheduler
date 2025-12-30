@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, Plus, Users, LogOut, Eye, EyeOff } from "lucide-react";
 import dynamic from "next/dynamic";
+import { useApiClient } from "@/hooks/useApi";
+import { apiPost } from "@/lib/api-client";
 
 // Helper function to format date consistently for SSR
 const formatDate = (dateString: string) => {
@@ -73,6 +75,7 @@ function AdminDashboard() {
     tenantId: "",
   });
   const router = useRouter();
+  const apiClient = useApiClient();
 
   // Utility function to get admin token
   const getAdminToken = () => {
@@ -103,9 +106,8 @@ function AdminDashboard() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-      const response = await fetch("/api/admin/auth/verify", {
+      const response = await apiClient.get("/api/admin/auth/verify", {
         signal: controller.signal,
-        credentials: "include",
         headers: {
           "Cache-Control": "no-cache",
           ...getAuthHeaders(),
@@ -149,8 +151,7 @@ function AdminDashboard() {
     setIsLoadingUsers(true);
     try {
       console.log("Fetching users...");
-      const response = await fetch("/api/admin/users", {
-        credentials: "include",
+      const response = await apiClient.get("/api/admin/users", {
         headers: getAuthHeaders(),
       });
 
@@ -180,8 +181,7 @@ function AdminDashboard() {
     setIsLoadingTenants(true);
     try {
       console.log("Fetching tenants...");
-      const response = await fetch("/api/admin/tenants", {
-        credentials: "include",
+      const response = await apiClient.get("/api/admin/tenants", {
         headers: getAuthHeaders(),
       });
       console.log("Tenants API response status:", response.status);
@@ -208,8 +208,7 @@ function AdminDashboard() {
     setIsLoadingConfigs(true);
     try {
       console.log("Fetching configs...");
-      const response = await fetch("/api/admin/configs", {
-        credentials: "include",
+      const response = await apiClient.get("/api/admin/configs", {
         headers: getAuthHeaders(),
       });
 
@@ -280,22 +279,12 @@ function AdminDashboard() {
     }
 
     try {
-      const response = await fetch("/api/admin/users", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify({
-          username: formData.username,
-          password: formData.password,
-          tenantId: parseInt(formData.tenantId),
-          updatedBy: "Admin",
-        }),
+      const response = await apiPost("/api/admin/users", {
+        username: formData.username,
+        password: formData.password,
+        tenantId: parseInt(formData.tenantId),
+        updatedBy: "Admin",
       });
-
-      const data = await response.json();
 
       if (response.ok) {
         setMessage("User created successfully!");
@@ -304,18 +293,16 @@ function AdminDashboard() {
         fetchUsers(); // Refresh users list
         setTimeout(() => setMessage(""), 3000);
       } else {
+        const data = await response.json();
         setMessage(data.error || "Failed to create user");
       }
-    } catch (error) {
-      setMessage("Network error. Please try again.");
+    } catch (error: any) {
     }
   };
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/admin/auth/logout", {
-        method: "POST",
-        credentials: "include",
+      await apiClient.post("/api/admin/auth/logout", undefined, {
         headers: getAuthHeaders(),
       });
     } catch (error) {

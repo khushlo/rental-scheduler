@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Trash2, X, AlertTriangle } from "lucide-react";
 
 import { formatDateForDisplay } from "@/lib/date-utils";
+import { apiDelete } from "@/lib/api-client";
 
 interface DeleteProductButtonProps {
   product: {
@@ -34,9 +35,7 @@ export function DeleteProductButton({
     setIsDeleting(true);
 
     try {
-      const response = await fetch(`/api/products?id=${product.id}`, {
-        method: "DELETE",
-      });
+      const response = await apiDelete(`/api/products?id=${product.id}`);
 
       const data = await response.json();
 

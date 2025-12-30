@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Plus, X } from 'lucide-react';
-import { clearCustomersCache } from '@/lib/customers-cache';
+import { useState } from "react";
+import { Plus, X } from "lucide-react";
+import { clearCustomersCache } from "@/lib/customers-cache";
+import { useApiMutation } from "@/hooks/useApi";
 
 interface AddCustomerFormProps {
   onCustomerAdded: () => void;
@@ -10,78 +11,68 @@ interface AddCustomerFormProps {
 
 export function AddCustomerForm({ onCustomerAdded }: AddCustomerFormProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
-    phone1: '',
-    phone2: '',
-    address: '',
-    notes: ''
+    name: "",
+    phone1: "",
+    phone2: "",
+    address: "",
+    notes: "",
   });
+
+  const {
+    mutate: createCustomer,
+    loading: isSubmitting,
+    error,
+  } = useApiMutation("POST");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    setError(null);
 
     try {
-      const response = await fetch('/api/customers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name.trim(),
-          phone1: formData.phone1.trim(),
-          phone2: formData.phone2.trim() || undefined,
-          address: formData.address.trim() || undefined,
-          notes: formData.notes.trim() || undefined,
-        }),
+      await createCustomer("/api/customers", {
+        name: formData.name.trim(),
+        phone1: formData.phone1.trim(),
+        phone2: formData.phone2.trim() || undefined,
+        address: formData.address.trim() || undefined,
+        notes: formData.notes.trim() || undefined,
       });
 
-      if (response.ok) {
-        // Clear customers cache since a new customer was created
-        clearCustomersCache();
-        setFormData({
-          name: '',
-          phone1: '',
-          phone2: '',
-          address: '',
-          notes: ''
-        });
-        setIsOpen(false);
-        onCustomerAdded();
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to create customer');
-      }
+      // Clear customers cache since a new customer was created
+      clearCustomersCache();
+      setFormData({
+        name: "",
+        phone1: "",
+        phone2: "",
+        address: "",
+        notes: "",
+      });
+      setIsOpen(false);
+      onCustomerAdded();
     } catch (error) {
-      console.error('Error creating customer:', error);
-      setError('Failed to create customer. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+      console.error("Error creating customer:", error);
+      // Error is handled by the useApiMutation hook
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleClose = () => {
     if (!isSubmitting) {
       setIsOpen(false);
-      setError(null);
       setFormData({
-        name: '',
-        phone1: '',
-        phone2: '',
-        address: '',
-        notes: ''
+        name: "",
+        phone1: "",
+        phone2: "",
+        address: "",
+        notes: "",
       });
     }
   };
@@ -100,7 +91,9 @@ export function AddCustomerForm({ onCustomerAdded }: AddCustomerFormProps) {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Add New Customer</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                Add New Customer
+              </h2>
               <button
                 onClick={handleClose}
                 disabled={isSubmitting}
@@ -118,7 +111,10 @@ export function AddCustomerForm({ onCustomerAdded }: AddCustomerFormProps) {
               )}
 
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
                   Customer Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -135,7 +131,10 @@ export function AddCustomerForm({ onCustomerAdded }: AddCustomerFormProps) {
               </div>
 
               <div>
-                <label htmlFor="phone1" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label
+                  htmlFor="phone1"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
                   Primary Phone <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -152,7 +151,10 @@ export function AddCustomerForm({ onCustomerAdded }: AddCustomerFormProps) {
               </div>
 
               <div>
-                <label htmlFor="phone2" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label
+                  htmlFor="phone2"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
                   Secondary Phone
                 </label>
                 <input
@@ -168,7 +170,10 @@ export function AddCustomerForm({ onCustomerAdded }: AddCustomerFormProps) {
               </div>
 
               <div>
-                <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label
+                  htmlFor="address"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
                   Address
                 </label>
                 <input
@@ -184,7 +189,10 @@ export function AddCustomerForm({ onCustomerAdded }: AddCustomerFormProps) {
               </div>
 
               <div>
-                <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label
+                  htmlFor="notes"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
                   Notes
                 </label>
                 <textarea
@@ -210,10 +218,14 @@ export function AddCustomerForm({ onCustomerAdded }: AddCustomerFormProps) {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting || !formData.name.trim() || !formData.phone1.trim()}
+                  disabled={
+                    isSubmitting ||
+                    !formData.name.trim() ||
+                    !formData.phone1.trim()
+                  }
                   className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? 'Creating...' : 'Create Customer'}
+                  {isSubmitting ? "Creating..." : "Create Customer"}
                 </button>
               </div>
             </form>

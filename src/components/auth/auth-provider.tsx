@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, createContext, useContext } from "react";
+import { clearAllCustomersCache } from "@/lib/customers-cache";
+import { clearAllProductsCache } from "@/lib/products-cache";
 
 interface User {
   id: number;
@@ -34,7 +36,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const response = await fetch("/api/auth/verify");
+      const response = await fetch("/api/auth/verify", {
+        credentials: "include",
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -57,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -78,10 +83,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
+      // Clear all caches when logging out to prevent cross-tenant data leakage
+      clearAllCustomersCache();
+      clearAllProductsCache();
       setUser(null);
       // Force a redirect to login after logout
       window.location.href = "/login";

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/components/auth/auth-provider";
+import { apiGet, apiPut } from "@/lib/api-client";
 import dynamic from "next/dynamic";
 
 interface TenantProfile {
@@ -75,10 +76,17 @@ function ProfileDrawerComponent() {
   }
 
   const fetchProfile = async () => {
+    if (!user?.tenantId) {
+      setMessage("No tenant information available");
+      return;
+    }
+
     try {
       setIsLoading(true);
-      // Using tenant ID 1 as default - in a real app, this would come from auth context
-      const response = await fetch("/api/tenant/profile?tenantId=1");
+      // Use authenticated user's tenant ID for security
+      const response = await apiGet(
+        `/api/tenant/profile?tenantId=${user.tenantId}`
+      );
       if (response.ok) {
         const data = await response.json();
         setProfile(data);
@@ -135,7 +143,7 @@ function ProfileDrawerComponent() {
       setMessage("");
 
       const updateData: any = {
-        tenantId: profile?.id,
+        tenantId: user?.tenantId, // Use authenticated user's tenant ID
         name: formData.name,
       };
 
@@ -149,13 +157,7 @@ function ProfileDrawerComponent() {
         updateData.password = formData.password;
       }
 
-      const response = await fetch("/api/tenant/profile", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updateData),
-      });
+      const response = await apiPut("/api/tenant/profile", updateData);
 
       if (response.ok) {
         const updatedProfile = await response.json();

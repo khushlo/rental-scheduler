@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { X } from "lucide-react";
+import { apiPut } from "@/lib/api-client";
 
 interface Configuration {
   id: number;
@@ -53,34 +54,36 @@ export function EditConfigurationDialog({
 
     try {
       const method = configuration.hasValue ? "PUT" : "POST";
-      const body = configuration.hasValue 
+      const body = configuration.hasValue
         ? {
             configId: configuration.id,
             value: value,
-            modifiedBy: "User"
+            modifiedBy: "User",
           }
         : {
             configId: configuration.id,
             value: value,
-            modifiedBy: "User"
+            modifiedBy: "User",
           };
 
-      const response = await fetch("/api/configurations", {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
+      const response = await apiPut("/api/configurations", body);
 
       if (response.ok) {
         onClose();
       } else {
         const errorData = await response.json();
-        setError(errorData.error || `Failed to ${configuration.hasValue ? 'update' : 'configure'} setting`);
+        setError(
+          errorData.error ||
+            `Failed to ${
+              configuration.hasValue ? "update" : "configure"
+            } setting`
+        );
       }
     } catch (error) {
-      console.error(`Error ${configuration.hasValue ? 'updating' : 'configuring'} setting:`, error);
+      console.error(
+        `Error ${configuration.hasValue ? "updating" : "configuring"} setting:`,
+        error
+      );
       setError("An unexpected error occurred");
     } finally {
       setIsSubmitting(false);
@@ -110,13 +113,13 @@ export function EditConfigurationDialog({
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              {configuration.hasValue ? 'Edit' : 'Configure'} Setting
+              {configuration.hasValue ? "Edit" : "Configure"} Setting
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              {configuration.hasValue 
-                ? `Update the value for` 
-                : `Set a value for`
-              } <strong>{configuration.configName}</strong>
+              {configuration.hasValue
+                ? `Update the value for`
+                : `Set a value for`}{" "}
+              <strong>{configuration.configName}</strong>
             </p>
             {configuration.description && (
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -158,10 +161,13 @@ export function EditConfigurationDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting 
-                ? (configuration.hasValue ? "Updating..." : "Setting...") 
-                : (configuration.hasValue ? "Update Setting" : "Set Value")
-              }
+              {isSubmitting
+                ? configuration.hasValue
+                  ? "Updating..."
+                  : "Setting..."
+                : configuration.hasValue
+                ? "Update Setting"
+                : "Set Value"}
             </Button>
           </div>
         </form>

@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { Plus, X } from 'lucide-react';
+import { clearProductsCache } from '@/lib/products-cache';
+import { apiPost } from '@/lib/api-client';
 
 interface AddProductFormProps {
   onProductAdded: () => void;
@@ -55,15 +57,11 @@ export function AddProductForm({ onProductAdded }: AddProductFormProps) {
     setErrors({});
 
     try {
-      const response = await fetch('/api/products', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+      const response = await apiPost('/api/products', formData);
 
       if (response.ok) {
+        // Clear products cache since a new product was created
+        clearProductsCache();
         // Reset form
         setFormData({
           name: '',

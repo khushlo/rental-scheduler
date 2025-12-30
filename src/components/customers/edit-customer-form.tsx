@@ -1,7 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Edit3, X } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { Edit3, X } from "lucide-react";
+import { apiPut } from "@/lib/api-client";
 
 interface Customer {
   id: number;
@@ -17,27 +18,30 @@ interface EditCustomerFormProps {
   onCustomerUpdated: () => void;
 }
 
-export function EditCustomerForm({ customer, onCustomerUpdated }: EditCustomerFormProps) {
+export function EditCustomerForm({
+  customer,
+  onCustomerUpdated,
+}: EditCustomerFormProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
-    phone1: '',
-    phone2: '',
-    address: '',
-    notes: ''
+    name: "",
+    phone1: "",
+    phone2: "",
+    address: "",
+    notes: "",
   });
 
   // Populate form with customer data when modal opens
   useEffect(() => {
     if (isOpen) {
       setFormData({
-        name: customer.name || '',
-        phone1: customer.phone1 || '',
-        phone2: customer.phone2 || '',
-        address: customer.address || '',
-        notes: customer.notes || ''
+        name: customer.name || "",
+        phone1: customer.phone1 || "",
+        phone2: customer.phone2 || "",
+        address: customer.address || "",
+        notes: customer.notes || "",
       });
     }
   }, [isOpen, customer]);
@@ -48,19 +52,13 @@ export function EditCustomerForm({ customer, onCustomerUpdated }: EditCustomerFo
     setError(null);
 
     try {
-      const response = await fetch('/api/customers', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: customer.id,
-          name: formData.name.trim(),
-          phone1: formData.phone1.trim(),
-          phone2: formData.phone2.trim() || undefined,
-          address: formData.address.trim() || undefined,
-          notes: formData.notes.trim() || undefined,
-        }),
+      const response = await apiPut("/api/customers", {
+        id: customer.id,
+        name: formData.name.trim(),
+        phone1: formData.phone1.trim(),
+        phone2: formData.phone2.trim() || null,
+        address: formData.address.trim() || null,
+        notes: formData.notes.trim() || null,
       });
 
       if (response.ok) {
@@ -68,21 +66,23 @@ export function EditCustomerForm({ customer, onCustomerUpdated }: EditCustomerFo
         onCustomerUpdated();
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to update customer');
+        setError(errorData.error || "Failed to update customer");
       }
     } catch (error) {
-      console.error('Error updating customer:', error);
-      setError('Failed to update customer. Please try again.');
+      console.error("Error updating customer:", error);
+      setError("Failed to update customer. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -108,7 +108,9 @@ export function EditCustomerForm({ customer, onCustomerUpdated }: EditCustomerFo
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Edit Customer</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                Edit Customer
+              </h2>
               <button
                 onClick={handleClose}
                 disabled={isSubmitting}
@@ -126,7 +128,10 @@ export function EditCustomerForm({ customer, onCustomerUpdated }: EditCustomerFo
               )}
 
               <div>
-                <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label
+                  htmlFor="edit-name"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
                   Customer Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -143,7 +148,10 @@ export function EditCustomerForm({ customer, onCustomerUpdated }: EditCustomerFo
               </div>
 
               <div>
-                <label htmlFor="edit-phone1" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label
+                  htmlFor="edit-phone1"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
                   Primary Phone <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -160,7 +168,10 @@ export function EditCustomerForm({ customer, onCustomerUpdated }: EditCustomerFo
               </div>
 
               <div>
-                <label htmlFor="edit-phone2" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label
+                  htmlFor="edit-phone2"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
                   Secondary Phone
                 </label>
                 <input
@@ -176,7 +187,10 @@ export function EditCustomerForm({ customer, onCustomerUpdated }: EditCustomerFo
               </div>
 
               <div>
-                <label htmlFor="edit-address" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label
+                  htmlFor="edit-address"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
                   Address
                 </label>
                 <input
@@ -192,7 +206,10 @@ export function EditCustomerForm({ customer, onCustomerUpdated }: EditCustomerFo
               </div>
 
               <div>
-                <label htmlFor="edit-notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label
+                  htmlFor="edit-notes"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
                   Notes
                 </label>
                 <textarea
@@ -218,10 +235,14 @@ export function EditCustomerForm({ customer, onCustomerUpdated }: EditCustomerFo
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting || !formData.name.trim() || !formData.phone1.trim()}
+                  disabled={
+                    isSubmitting ||
+                    !formData.name.trim() ||
+                    !formData.phone1.trim()
+                  }
                   className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? 'Updating...' : 'Update Customer'}
+                  {isSubmitting ? "Updating..." : "Update Customer"}
                 </button>
               </div>
             </form>

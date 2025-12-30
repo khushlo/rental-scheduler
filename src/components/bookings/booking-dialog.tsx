@@ -8,8 +8,9 @@ import { RentalPeriod } from "./dialog/rental-period";
 import { BookingItemComponent } from "./dialog/booking-item";
 import { AddCustomerForm } from "./dialog/add-customer-form";
 import { AddProductForm } from "./dialog/add-product-form";
-import { fetchProductsGlobal, clearProductsCache } from '@/lib/products-cache';
-import { clearCustomersCache } from '@/lib/customers-cache';
+import { apiGet, apiPost, apiPut } from "@/lib/api-client";
+import { fetchProductsGlobal, clearProductsCache } from "@/lib/products-cache";
+import { clearCustomersCache } from "@/lib/customers-cache";
 import { PaymentInformation } from "./dialog/payment-information";
 import { useAvailability } from "./dialog/use-availability";
 import { useProductSearch } from "./dialog/use-product-search";
@@ -226,7 +227,8 @@ export function BookingDialog({
       // Check if AddDefaultNotes is configured and set to true
       if (
         addDefaultNotesConfig &&
-        (addDefaultNotesConfig.value === "true" || addDefaultNotesConfig.value === "1")
+        (addDefaultNotesConfig.value === "true" ||
+          addDefaultNotesConfig.value === "1")
       ) {
         addDefaultNotes();
       }
@@ -247,7 +249,7 @@ export function BookingDialog({
 
   const fetchConfigurations = async () => {
     try {
-      const response = await fetch("/api/configurations");
+      const response = await apiGet("/api/configurations");
       if (response.ok) {
         const data = await response.json();
         setConfigurations(data);
@@ -262,7 +264,7 @@ export function BookingDialog({
 
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/bookings/${bookingId}`);
+      const response = await apiGet(`/api/bookings/${bookingId}`);
       if (response.ok) {
         const bookingData = await response.json();
         setBooking(bookingData);
@@ -554,21 +556,24 @@ export function BookingDialog({
 
       // Create customer if not selected
       if (!selectedCustomer && customerSearchTerm.trim()) {
-        const customerResponse = await fetch("/api/customers", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        try {
+          const response = await apiPost("/api/customers", {
             name: customerSearchTerm.trim(),
             phone1: "N/A",
-          }),
-        });
-
-        if (customerResponse.ok) {
-          const newCustomer = await customerResponse.json();
-          customerId = newCustomer.id;
-          // Clear customers cache since a new customer was created
-          clearCustomersCache();
-        } else {
+          });
+          if (response.ok) {
+            const newCustomer = await response.json();
+            customerId = newCustomer.id;
+            // Clear customers cache since a new customer was created
+            clearCustomersCache();
+          } else {
+            throw new Error("Failed to create customer");
+          }
+        } catch (error: any) {
+          if (error.status === 401) {
+            // Handled by API client
+            return;
+          }
           throw new Error("Failed to create customer");
         }
       }
@@ -583,11 +588,10 @@ export function BookingDialog({
         mode === "edit" ? `/api/bookings/${bookingId}` : "/api/bookings";
       const method = mode === "edit" ? "PUT" : "POST";
 
-      const response = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(bookingData),
-      });
+      const response =
+        mode === "edit"
+          ? await apiPut(url, bookingData)
+          : await apiPost(url, bookingData);
 
       if (response.ok) {
         onSuccess();

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X } from "lucide-react";
+import { apiGet, apiPost } from "@/lib/api-client";
 
 interface MasterConfiguration {
   id: number;
@@ -24,7 +25,9 @@ export function AddConfigurationDialog({
   onClose,
   onConfigurationAdded,
 }: AddConfigurationDialogProps) {
-  const [availableConfigurations, setAvailableConfigurations] = useState<MasterConfiguration[]>([]);
+  const [availableConfigurations, setAvailableConfigurations] = useState<
+    MasterConfiguration[]
+  >([]);
   const [selectedConfigId, setSelectedConfigId] = useState<number | null>(null);
   const [value, setValue] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,7 +44,7 @@ export function AddConfigurationDialog({
   const fetchAvailableConfigurations = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/configurations/available");
+      const response = await apiGet("/api/configurations/available");
       if (response.ok) {
         const data = await response.json();
         setAvailableConfigurations(data);
@@ -73,16 +76,10 @@ export function AddConfigurationDialog({
     setError("");
 
     try {
-      const response = await fetch("/api/configurations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          configId: selectedConfigId,
-          value: value.trim(),
-          modifiedBy: "User",
-        }),
+      const response = await apiPost("/api/configurations", {
+        configId: selectedConfigId,
+        value: value.trim(),
+        modifiedBy: "User",
       });
 
       if (response.ok) {
@@ -143,7 +140,9 @@ export function AddConfigurationDialog({
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-2 text-gray-600 dark:text-gray-400">Loading configurations...</span>
+              <span className="ml-2 text-gray-600 dark:text-gray-400">
+                Loading configurations...
+              </span>
             </div>
           ) : availableConfigurations.length === 0 ? (
             <div className="text-center py-8">
@@ -158,7 +157,11 @@ export function AddConfigurationDialog({
                 <select
                   id="configSelect"
                   value={selectedConfigId || ""}
-                  onChange={(e) => setSelectedConfigId(e.target.value ? Number(e.target.value) : null)}
+                  onChange={(e) =>
+                    setSelectedConfigId(
+                      e.target.value ? Number(e.target.value) : null
+                    )
+                  }
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100"
                   required
                 >
@@ -171,7 +174,11 @@ export function AddConfigurationDialog({
                 </select>
                 {selectedConfigId && (
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {availableConfigurations.find(c => c.id === selectedConfigId)?.description}
+                    {
+                      availableConfigurations.find(
+                        (c) => c.id === selectedConfigId
+                      )?.description
+                    }
                   </p>
                 )}
               </div>
@@ -204,9 +211,13 @@ export function AddConfigurationDialog({
             >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting || isLoading || availableConfigurations.length === 0}
+            <Button
+              type="submit"
+              disabled={
+                isSubmitting ||
+                isLoading ||
+                availableConfigurations.length === 0
+              }
             >
               {isSubmitting ? "Configuring..." : "Set Configuration"}
             </Button>

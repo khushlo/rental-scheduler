@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
+import { apiGet } from '@/lib/api-client';
 
 interface Product {
   id: number;
@@ -24,7 +25,7 @@ export function useProductSearch() {
     }
 
     try {
-      const response = await fetch(`/api/products?search=${encodeURIComponent(searchTerm)}`);
+      const response = await apiGet(`/api/products?search=${encodeURIComponent(searchTerm)}`);
       if (response.ok) {
         const allProducts = await response.json();
         const filtered = allProducts.filter((product: Product) =>

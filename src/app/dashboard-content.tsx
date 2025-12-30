@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { apiGet } from "@/lib/api-client";
 import Link from "next/link";
 import {
   Calendar,
@@ -56,7 +57,7 @@ export default function DashboardContent() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch("/api/dashboard");
+        const response = await apiGet("/api/dashboard");
 
         if (response.ok) {
           const data = await response.json();
@@ -131,12 +132,12 @@ export default function DashboardContent() {
     if (!mounted) {
       return `₹${amount.toFixed(2)}`; // Fallback during SSR
     }
-    
+
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
     }).format(amount);
   };
 

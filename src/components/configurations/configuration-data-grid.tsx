@@ -5,6 +5,7 @@ import { DataGrid, Column } from "@/components/ui/data-grid";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { EditConfigurationDialog } from "./edit-configuration-dialog";
+import { apiGet } from "@/lib/api-client";
 
 interface Configuration {
   id: number;
@@ -32,7 +33,7 @@ export default function ConfigurationDataGrid() {
   const fetchConfigurations = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/configurations");
+      const response = await apiGet("/api/configurations");
       if (response.ok) {
         const data = await response.json();
         setConfigurations(data);
@@ -119,7 +120,7 @@ export default function ConfigurationDataGrid() {
           size="sm"
           onClick={() => handleEdit(config)}
           className="p-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-          title={config.hasValue ? 'Edit value' : 'Configure value'}
+          title={config.hasValue ? "Edit value" : "Configure value"}
         >
           <Pencil className="h-4 w-4" />
         </Button>

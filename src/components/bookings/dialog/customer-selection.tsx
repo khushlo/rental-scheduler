@@ -1,7 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { X, UserPlus } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { X, UserPlus } from "lucide-react";
+import { apiGet } from "@/lib/api-client";
 
 interface Customer {
   id: number;
@@ -28,9 +29,11 @@ export function CustomerSelection({
   onCustomerSelect,
   onClearSelection,
   onShowAddCustomer,
-  isSubmitting
+  isSubmitting,
 }: CustomerSelectionProps) {
-  const [customerSuggestions, setCustomerSuggestions] = useState<Customer[]>([]);
+  const [customerSuggestions, setCustomerSuggestions] = useState<Customer[]>(
+    []
+  );
   const [isSearching, setIsSearching] = useState(false);
 
   // Debounced customer search
@@ -39,13 +42,15 @@ export function CustomerSelection({
       const timeoutId = setTimeout(async () => {
         setIsSearching(true);
         try {
-          const response = await fetch(`/api/customers/search?q=${encodeURIComponent(customerSearchTerm)}`);
+          const response = await apiGet(
+            `/api/customers/search?q=${encodeURIComponent(customerSearchTerm)}`
+          );
           if (response.ok) {
             const suggestions = await response.json();
             setCustomerSuggestions(suggestions);
           }
         } catch (error) {
-          console.error('Error searching customers:', error);
+          console.error("Error searching customers:", error);
         } finally {
           setIsSearching(false);
         }
@@ -60,7 +65,9 @@ export function CustomerSelection({
   return (
     <div>
       <div className="mb-4">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Customer Information</h3>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+          Customer Information
+        </h3>
       </div>
       <div className="relative">
         <div className="flex items-center gap-2">
@@ -111,32 +118,50 @@ export function CustomerSelection({
                 onClick={() => onCustomerSelect(customer)}
                 className="p-3 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer border-b border-gray-100 dark:border-gray-600 last:border-b-0"
               >
-                <div className="font-medium text-gray-900 dark:text-gray-100">{customer.name}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">{customer.phone1}</div>
+                <div className="font-medium text-gray-900 dark:text-gray-100">
+                  {customer.name}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  {customer.phone1}
+                </div>
                 {customer.phone2 && (
-                  <div className="text-sm text-gray-600 dark:text-gray-400">{customer.phone2}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    {customer.phone2}
+                  </div>
                 )}
               </div>
             ))}
           </div>
         )}
-        {!isSearching && customerSearchTerm.length >= 2 && customerSuggestions.length === 0 && !selectedCustomer && (
-          <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg top-full left-0">
-            <div className="p-3 text-sm text-gray-500 dark:text-gray-400 text-center">
-              No customers found. A new customer will be created with this name.
+        {!isSearching &&
+          customerSearchTerm.length >= 2 &&
+          customerSuggestions.length === 0 &&
+          !selectedCustomer && (
+            <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg top-full left-0">
+              <div className="p-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                No customers found. A new customer will be created with this
+                name.
+              </div>
             </div>
-          </div>
-        )}
+          )}
       </div>
       {selectedCustomer && (
         <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
-          <div className="font-medium text-blue-900 dark:text-blue-100">{selectedCustomer.name}</div>
-          <div className="text-sm text-blue-700 dark:text-blue-300">{selectedCustomer.phone1}</div>
+          <div className="font-medium text-blue-900 dark:text-blue-100">
+            {selectedCustomer.name}
+          </div>
+          <div className="text-sm text-blue-700 dark:text-blue-300">
+            {selectedCustomer.phone1}
+          </div>
           {selectedCustomer.phone2 && (
-            <div className="text-sm text-blue-700 dark:text-blue-300">{selectedCustomer.phone2}</div>
+            <div className="text-sm text-blue-700 dark:text-blue-300">
+              {selectedCustomer.phone2}
+            </div>
           )}
           {selectedCustomer.address && (
-            <div className="text-sm text-blue-700 dark:text-blue-300">{selectedCustomer.address}</div>
+            <div className="text-sm text-blue-700 dark:text-blue-300">
+              {selectedCustomer.address}
+            </div>
           )}
         </div>
       )}

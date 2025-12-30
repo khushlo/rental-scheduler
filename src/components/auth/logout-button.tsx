@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/components/auth/auth-provider";
 
 interface LogoutButtonProps {
   children?: React.ReactNode;
@@ -20,24 +21,10 @@ export function LogoutButton({
   variant = "ghost",
   size = "default",
 }: LogoutButtonProps) {
-  const router = useRouter();
+  const { logout } = useAuth();
 
   const handleLogout = async () => {
-    try {
-      const response = await fetch("/api/auth/logout", {
-        method: "POST",
-      });
-
-      if (response.ok) {
-        // Logout successful - redirect to login
-        router.push("/login");
-        router.refresh(); // Refresh to update auth state
-      } else {
-        console.error("Logout failed");
-      }
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
+    await logout();
   };
 
   return (

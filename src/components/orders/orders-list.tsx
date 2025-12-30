@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { format, parseISO } from "date-fns";
 import { Calendar, List, Search, Filter } from "lucide-react";
 import { BookingDialog } from "../bookings/booking-dialog";
-
+import { apiGet } from "@/lib/api-client";
 
 interface BookingItem {
   id: number;
@@ -52,7 +52,10 @@ interface OrdersListProps {
   showAllItems: boolean;
 }
 
-export function OrdersList({ selectedProductId, showAllItems }: OrdersListProps) {
+export function OrdersList({
+  selectedProductId,
+  showAllItems,
+}: OrdersListProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,10 +75,10 @@ export function OrdersList({ selectedProductId, showAllItems }: OrdersListProps)
       if (!showAllItems && selectedProductId) {
         url += `?productId=${selectedProductId}`;
       }
-      
-      const response = await fetch(url);
+
+      const response = await apiGet(url);
       if (!response.ok) {
-        throw new Error('Failed to fetch bookings');
+        throw new Error("Failed to fetch bookings");
       }
       const data = await response.json();
       setBookings(data);

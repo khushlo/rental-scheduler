@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { apiPost } from "@/lib/api-client";
 
 interface AddProductFormProps {
   isOpen: boolean;
@@ -50,13 +51,7 @@ export function AddProductForm({
     setError(null);
 
     try {
-      const response = await fetch("/api/products", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      const response = await apiPost("/api/products", formData);
 
       if (response.ok) {
         setFormData({
@@ -72,9 +67,13 @@ export function AddProductForm({
         const errorData = await response.json();
         setError(errorData.error || "Failed to create product");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating product:", error);
-      setError("Failed to create product. Please try again.");
+      if (error.status === 401) {
+        // Handled by API client
+        return;
+      }
+      setError(error.error || "Failed to create product. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

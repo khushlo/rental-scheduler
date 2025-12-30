@@ -21,7 +21,7 @@ import {
   ChevronRight,
   Calendar as CalendarIcon,
 } from "lucide-react";
-
+import { apiGet } from "@/lib/api-client";
 
 interface BookingItem {
   id: string;
@@ -62,7 +62,10 @@ interface CalendarViewProps {
   showAllItems: boolean;
 }
 
-export function CalendarView({ selectedProductId, showAllItems }: CalendarViewProps) {
+export function CalendarView({
+  selectedProductId,
+  showAllItems,
+}: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,7 +81,7 @@ export function CalendarView({ selectedProductId, showAllItems }: CalendarViewPr
     const fetchBookings = async () => {
       // Prevent concurrent requests
       if (fetchingRef.current) {
-        console.log('🔒 Skipping duplicate fetch request');
+        console.log("🔒 Skipping duplicate fetch request");
         return;
       }
 
@@ -91,16 +94,16 @@ export function CalendarView({ selectedProductId, showAllItems }: CalendarViewPr
       try {
         fetchingRef.current = true;
         setLoading(true);
-        
+
         let url = "/api/bookings";
         if (!showAllItems && selectedProductId) {
           url += `?productId=${selectedProductId}`;
         }
-        
-        console.log('📅 Fetching calendar bookings from:', url);
-        const response = await fetch(url);
+
+        console.log("📅 Fetching calendar bookings from:", url);
+        const response = await apiGet(url);
         if (!response.ok) {
-          throw new Error('Failed to fetch bookings');
+          throw new Error("Failed to fetch bookings");
         }
         const data = await response.json();
         setBookings(data);
@@ -306,19 +309,30 @@ export function CalendarView({ selectedProductId, showAllItems }: CalendarViewPr
                         let displayText, titleText;
                         if (selectedProductId) {
                           // Show quantity for selected product only
-                          const selectedProductItems = booking.items.filter(item => 
-                            Number(item.product.id) === Number(selectedProductId)
+                          const selectedProductItems = booking.items.filter(
+                            (item) =>
+                              Number(item.product.id) ===
+                              Number(selectedProductId)
                           );
-                          const totalQuantity = selectedProductItems.reduce((sum, item) => sum + item.quantity, 0);
-                          const productName = selectedProductItems[0]?.product.name || 'Unknown Product';
+                          const totalQuantity = selectedProductItems.reduce(
+                            (sum, item) => sum + item.quantity,
+                            0
+                          );
+                          const productName =
+                            selectedProductItems[0]?.product.name ||
+                            "Unknown Product";
                           displayText = `${totalQuantity}x`;
                           titleText = `${totalQuantity}x ${productName} - ${booking.customer.name}`;
                         } else {
                           // Show total items count
-                          displayText = `${booking.items.length} item${booking.items.length > 1 ? "s" : ""}`;
-                          titleText = `${booking.items.length} item${booking.items.length > 1 ? "s" : ""} - ${booking.customer.name}`;
+                          displayText = `${booking.items.length} item${
+                            booking.items.length > 1 ? "s" : ""
+                          }`;
+                          titleText = `${booking.items.length} item${
+                            booking.items.length > 1 ? "s" : ""
+                          } - ${booking.customer.name}`;
                         }
-                        
+
                         return (
                           <div
                             key={booking.id}
@@ -361,19 +375,27 @@ export function CalendarView({ selectedProductId, showAllItems }: CalendarViewPr
                   let headerText, itemsToShow;
                   if (selectedProductId) {
                     // Show only the selected product items
-                    const selectedProductItems = booking.items.filter(item => 
-                      Number(item.product.id) === Number(selectedProductId)
+                    const selectedProductItems = booking.items.filter(
+                      (item) =>
+                        Number(item.product.id) === Number(selectedProductId)
                     );
-                    const totalQuantity = selectedProductItems.reduce((sum, item) => sum + item.quantity, 0);
-                    const productName = selectedProductItems[0]?.product.name || 'Unknown Product';
+                    const totalQuantity = selectedProductItems.reduce(
+                      (sum, item) => sum + item.quantity,
+                      0
+                    );
+                    const productName =
+                      selectedProductItems[0]?.product.name ||
+                      "Unknown Product";
                     headerText = `${totalQuantity}x ${productName}`;
                     itemsToShow = selectedProductItems;
                   } else {
                     // Show all items
-                    headerText = `${booking.items.length} item${booking.items.length > 1 ? "s" : ""}`;
+                    headerText = `${booking.items.length} item${
+                      booking.items.length > 1 ? "s" : ""
+                    }`;
                     itemsToShow = booking.items;
                   }
-                  
+
                   return (
                     <div
                       key={booking.id}
@@ -405,28 +427,28 @@ export function CalendarView({ selectedProductId, showAllItems }: CalendarViewPr
                         ))}
                       </div>
 
-                    <p className="text-sm text-gray-900 dark:text-gray-100 mb-1">
-                      {booking.customer.name}
-                    </p>
-
-                    <p className="text-xs text-gray-600 dark:text-gray-300 mb-1">
-                      {format(parseISO(booking.startDate), "MMM d")} -{" "}
-                      {format(parseISO(booking.endDate), "MMM d")}
-                    </p>
-
-                    <p className="text-xs text-gray-600 dark:text-gray-300 mb-2">
-                      {booking.startTime} - {booking.endTime}
-                    </p>
-
-                    <p className="text-sm font-medium text-green-600">
-                      ₹{booking.totalAmount.toFixed(2)}
-                    </p>
-
-                    {booking.notes && (
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 italic">
-                        {booking.notes}
+                      <p className="text-sm text-gray-900 dark:text-gray-100 mb-1">
+                        {booking.customer.name}
                       </p>
-                    )}
+
+                      <p className="text-xs text-gray-600 dark:text-gray-300 mb-1">
+                        {format(parseISO(booking.startDate), "MMM d")} -{" "}
+                        {format(parseISO(booking.endDate), "MMM d")}
+                      </p>
+
+                      <p className="text-xs text-gray-600 dark:text-gray-300 mb-2">
+                        {booking.startTime} - {booking.endTime}
+                      </p>
+
+                      <p className="text-sm font-medium text-green-600">
+                        ₹{booking.totalAmount.toFixed(2)}
+                      </p>
+
+                      {booking.notes && (
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 italic">
+                          {booking.notes}
+                        </p>
+                      )}
                     </div>
                   );
                 })}
