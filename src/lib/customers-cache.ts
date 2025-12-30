@@ -35,9 +35,10 @@ export const fetchCustomersGlobal = async (): Promise<any[]> => {
   }
 
   // Return existing promise if fetch is in progress for this tenant
-  if (customersFetchPromises[tenantId]) {
+  const existingPromise = customersFetchPromises[tenantId];
+  if (existingPromise) {
     console.log(`⏳ Waiting for existing customers fetch for tenant ${tenantId}`);
-    return customersFetchPromises[tenantId];
+    return existingPromise;
   }
 
   // Create new fetch promise for this tenant
