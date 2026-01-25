@@ -390,7 +390,7 @@ export function BookingsDataGrid() {
       // Update the booking with the completed status
       const response = await apiPut(`/api/bookings/${bookingId}`, {
         ...bookingData,
-        statusCd: "C", // Set status to Completed
+        rowStatusCd: "C", // Set status to Completed
       });
 
       if (response.ok) {

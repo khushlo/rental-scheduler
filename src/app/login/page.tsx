@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { LoginForm } from "@/components/auth/login-form";
 
 export default function LoginPage() {
@@ -11,6 +12,14 @@ export default function LoginPage() {
           <p className="text-gray-600 mt-2">Sign in to your account</p>
         </div>
         <LoginForm />
+        <div className="text-center mt-4">
+          <Link
+            href="/admin/login"
+            className="text-sm text-blue-600 hover:text-blue-800 underline"
+          >
+            Admin Login
+          </Link>
+        </div>
       </div>
     </div>
   );

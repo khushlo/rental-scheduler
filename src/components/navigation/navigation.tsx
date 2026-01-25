@@ -21,9 +21,12 @@ import {
   Store,
   ClockAlert,
   Sliders,
+  LogOut,
 } from "lucide-react";
 import { SimpleToggle } from "@/components/ui/theme-toggle-shadcn";
 import { ProfileDrawer } from "@/components/profile/profile-drawer";
+import { useAuth } from "@/components/auth/auth-provider";
+import { Button } from "@/components/ui/button";
 
 interface NavigationSubItem {
   name: string;
@@ -106,6 +109,7 @@ const navigation: NavigationItem[] = [
 
 export function Navigation() {
   const pathname = usePathname();
+  const { logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -121,6 +125,10 @@ export function Navigation() {
 
   const toggleDropdown = (itemName: string) => {
     setOpenDropdown(openDropdown === itemName ? null : itemName);
+  };
+
+  const handleLogout = async () => {
+    await logout();
   };
 
   const isSubItemActive = (subItems: NavigationSubItem[]) => {
@@ -250,12 +258,30 @@ export function Navigation() {
           {/* Desktop Theme Toggle and Profile */}
           <div className="hidden sm:flex items-center space-x-2">
             <SimpleToggle />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="p-2"
+              title="Logout"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
             <ProfileDrawer />
           </div>
 
           {/* Mobile menu button and profile */}
           <div className="sm:hidden flex items-center space-x-2">
             <SimpleToggle />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="p-2"
+              title="Logout"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
             <ProfileDrawer />
             <button
               onClick={toggleMobileMenu}

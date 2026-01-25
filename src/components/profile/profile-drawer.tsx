@@ -36,7 +36,7 @@ interface ProfileFormData {
 }
 
 function ProfileDrawerComponent() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [profile, setProfile] = useState<TenantProfile | null>(null);
@@ -50,11 +50,6 @@ function ProfileDrawerComponent() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [showPasswordSection, setShowPasswordSection] = useState(false);
-
-  const handleLogout = async () => {
-    await logout();
-    setIsOpen(false);
-  };
 
   useEffect(() => {
     setMounted(true);
@@ -373,16 +368,7 @@ function ProfileDrawerComponent() {
             </div>
 
             {/* Fixed Action Buttons */}
-            <div className="flex-shrink-0 flex justify-between pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
-              <Button
-                variant="destructive"
-                onClick={handleLogout}
-                className="flex items-center gap-2"
-              >
-                <LogOut className="h-4 w-4" />
-                Logout
-              </Button>
-
+            <div className="flex-shrink-0 flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
               <div className="flex space-x-2">
                 <Button
                   variant="outline"
