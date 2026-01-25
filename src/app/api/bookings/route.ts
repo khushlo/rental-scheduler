@@ -144,10 +144,28 @@ export async function GET(request: NextRequest) {
       const search = searchParams.get('search')
       const customerId = searchParams.get('customerId')
       const productId = searchParams.get('productId')
+      const startDate = searchParams.get('startDate')
+      const endDate = searchParams.get('endDate')
       // Note: status filtering is now done client-side using calculateBookingStatus
 
       let whereClause: any = {
         tenantId: user.tenantId // Filter by tenant
+      }
+
+      // Add date filter if provided
+      if (startDate && endDate) {
+        whereClause.AND = [
+          {
+            startDate: {
+              gte: new Date(startDate),
+            }
+          },
+          {
+            endDate: {
+              lte: new Date(endDate),
+            }
+          }
+        ]
       }
 
       // Add search functionality

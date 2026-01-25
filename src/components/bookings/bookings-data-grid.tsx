@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { FileText, CheckCircle } from "lucide-react";
+import { FileText, CheckCircle, Calendar, RotateCcw } from "lucide-react";
 import { DataGrid, Column } from "@/components/ui/data-grid";
 import { AddBookingForm } from "./add-booking-form";
 import { EditBookingForm } from "./edit-booking-form";
 import { DeleteBookingButton } from "./delete-booking-button";
 import { apiGet, apiPut } from "@/lib/api-client";
+import { getConfigValues } from "@/lib/configurations-cache";
 
 import {
   formatId,
@@ -79,10 +80,135 @@ export function BookingsDataGrid() {
   const fetchingRef = useRef(false);
   const router = useRouter();
 
+  // Date filter state (past 1 month to future 11 months)
+  const [dateFilter, setDateFilter] = useState<{
+    startDate: string;
+    endDate: string;
+  }>({
+    startDate: "",
+    endDate: "",
+  });
+
+  // Calculate default date range (synchronous with defaults)
+  const calculateDefaultDateRange = (
+    daysBefore: number = 30,
+    daysAfter: number = 365,
+  ) => {
+    const now = new Date();
+
+    // Validate and apply reasonable limits
+    if (isNaN(daysBefore) || daysBefore < 0 || daysBefore > 3650) {
+      daysBefore = 30;
+    }
+    if (isNaN(daysAfter) || daysAfter < 1 || daysAfter > 3650) {
+      daysAfter = 365;
+    }
+
+    // Start date: current date minus config days
+    const startDate = new Date(
+      now.getTime() - daysBefore * 24 * 60 * 60 * 1000,
+    );
+
+    // End date: current date plus config days
+    const endDate = new Date(now.getTime() + daysAfter * 24 * 60 * 60 * 1000);
+
+    console.log(
+      `Default date range (${daysBefore} days before, ${daysAfter} days after):`,
+      startDate,
+      endDate,
+    );
+
+    return {
+      startDate: startDate.toISOString().split("T")[0],
+      endDate: endDate.toISOString().split("T")[0],
+    };
+  };
+
+  // Load configuration values and update date filter
+  const loadConfigurationAndUpdateDates = async () => {
+    try {
+      const configValues = await getConfigValues([
+        "Bookings_StartDate_Before",
+        "Bookings_EndDate_After",
+      ]);
+
+      const daysBefore = parseInt(
+        configValues["Bookings_StartDate_Before"] || "30",
+        10,
+      );
+      const daysAfter = parseInt(
+        configValues["Bookings_EndDate_After"] || "365",
+        10,
+      );
+
+      console.log("Loaded config values:", { daysBefore, daysAfter });
+
+      // Recalculate with config values
+      const configRange = calculateDefaultDateRange(daysBefore, daysAfter);
+      setDateFilter({
+        startDate: configRange.startDate,
+        endDate: configRange.endDate,
+      });
+    } catch (error) {
+      console.error("Failed to load configuration, using defaults:", error);
+    }
+  };
+
   // Ensure component is mounted on client side to prevent hydration issues
   useEffect(() => {
     setIsMounted(true);
+
+    // Set default date range immediately with defaults
+    const defaultRange = calculateDefaultDateRange();
+    console.log("Setting initial default date filter:", defaultRange);
+    setDateFilter({
+      startDate: defaultRange.startDate,
+      endDate: defaultRange.endDate,
+    });
+
+    // Then load configuration and update if different
+    loadConfigurationAndUpdateDates();
   }, []);
+
+  // Function to reset date filter to default
+  const resetDateFilter = async () => {
+    try {
+      const configValues = await getConfigValues([
+        "Bookings_StartDate_Before",
+        "Bookings_EndDate_After",
+      ]);
+
+      const daysBefore = parseInt(
+        configValues["Bookings_StartDate_Before"] || "30",
+        10,
+      );
+      const daysAfter = parseInt(
+        configValues["Bookings_EndDate_After"] || "365",
+        10,
+      );
+
+      const defaultRange = calculateDefaultDateRange(daysBefore, daysAfter);
+      setDateFilter({
+        startDate: defaultRange.startDate,
+        endDate: defaultRange.endDate,
+      });
+    } catch (error) {
+      console.error("Failed to reset date filter, using defaults:", error);
+      const defaultRange = calculateDefaultDateRange();
+      setDateFilter({
+        startDate: defaultRange.startDate,
+        endDate: defaultRange.endDate,
+      });
+    }
+  };
+
+  // Function to update date filter range
+  const updateDateFilter = (startDate: string, endDate: string) => {
+    setDateFilter({
+      startDate,
+      endDate,
+    });
+  };
 
   // Function to navigate to invoice page
   const handleGenerateInvoice = (booking: Booking) => {
@@ -110,7 +236,7 @@ export function BookingsDataGrid() {
     const startDate = safeFormatDate(
       item.itemStartDate,
       "dd MMM, yyyy",
-      isMounted
+      isMounted,
     );
     const endDate = safeFormatDate(item.itemEndDate, "dd MMM, yyyy", isMounted);
     const startTime = item.itemStartTime || "";
@@ -126,10 +252,10 @@ export function BookingsDataGrid() {
   // Helper function to separate items by timing type
   const separateItemsByTiming = (items: BookingItem[]) => {
     const regularItems = items.filter(
-      (item) => !item.itemStartDate && !item.itemEndDate
+      (item) => !item.itemStartDate && !item.itemEndDate,
     );
     const customTimingItems = items.filter(
-      (item) => item.itemStartDate || item.itemEndDate
+      (item) => item.itemStartDate || item.itemEndDate,
     );
     return { regularItems, customTimingItems };
   };
@@ -140,7 +266,7 @@ export function BookingsDataGrid() {
 
     bookings.forEach((booking) => {
       const { regularItems, customTimingItems } = separateItemsByTiming(
-        booking.items
+        booking.items,
       );
 
       // Create entry for custom timing items (if any)
@@ -166,7 +292,7 @@ export function BookingsDataGrid() {
                 customEndDate,
                 booking.status === "cancelled",
                 booking.rowStatusCd,
-                isMounted
+                isMounted,
               ) || booking.status, // Fallback to existing status during SSR
             // Add a flag to identify this as a custom timing entry
             isCustomTimingEntry: true,
@@ -183,7 +309,7 @@ export function BookingsDataGrid() {
           items: regularItems,
           totalAmount: regularItems.reduce(
             (sum, item) => sum + item.subtotal,
-            0
+            0,
           ),
           // Recalculate status for regular items too, in case original was incorrect
           status:
@@ -192,7 +318,7 @@ export function BookingsDataGrid() {
               booking.endDate,
               booking.status === "cancelled",
               booking.rowStatusCd,
-              isMounted
+              isMounted,
             ) || booking.status, // Fallback to existing status during SSR
           // Add a flag to identify this as a regular entry
           isCustomTimingEntry: false,
@@ -205,14 +331,14 @@ export function BookingsDataGrid() {
     // Sort by start date (ascending) so custom timing items appear in correct chronological order
     return separatedEntries.sort(
       (a, b) =>
-        new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+        new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
     );
   };
 
   // Custom search function for bookings
   const searchBookings = (
     bookings: Booking[],
-    searchTerm: string
+    searchTerm: string,
   ): Booking[] => {
     if (!searchTerm.trim()) return bookings;
 
@@ -246,7 +372,7 @@ export function BookingsDataGrid() {
         booking.items.some(
           (item) =>
             item.product.name.toLowerCase().includes(searchLower) ||
-            item.product.category?.toLowerCase().includes(searchLower)
+            item.product.category?.toLowerCase().includes(searchLower),
         )
       )
         return true;
@@ -332,6 +458,14 @@ export function BookingsDataGrid() {
     }
   }, [showCompletedBookings]);
 
+  // Refetch when date filter changes (after initial mount)
+  useEffect(() => {
+    if (hasFetchedInitially.current) {
+      console.log("Date filter changed, refetching...");
+      fetchBookings();
+    }
+  }, [dateFilter]);
+
   const fetchBookings = async () => {
     // Prevent concurrent calls
     if (fetchingRef.current) {
@@ -342,16 +476,28 @@ export function BookingsDataGrid() {
     try {
       fetchingRef.current = true;
       setLoading(true);
-      console.log("Fetching bookings using shared cache...");
+      console.log("Fetching bookings with date filter...");
 
-      // Use shared cache with showAllItems=true to get all bookings
-      const response = await apiGet("/api/bookings");
+      // Build query parameters for API
+      const queryParams = new URLSearchParams();
+
+      // Always add date filter parameters
+      if (dateFilter.startDate && dateFilter.endDate) {
+        queryParams.append("startDate", dateFilter.startDate);
+        queryParams.append("endDate", dateFilter.endDate);
+      }
+
+      const url = `/api/bookings${
+        queryParams.toString() ? `?${queryParams.toString()}` : ""
+      }`;
+      const response = await apiGet(url);
+
       if (!response.ok) {
         throw new Error("Failed to fetch bookings");
       }
       const data = await response.json();
 
-      // Filter bookings based on rowStatusCd
+      // Apply status filtering on client side (keep original logic)
       const filteredData = data.filter((booking: Booking) => {
         if (showCompletedBookings) {
           // Show both Active (A) and Completed (C) bookings
@@ -455,7 +601,7 @@ export function BookingsDataGrid() {
           </div>
           <span
             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBookingStatusColor(
-              booking.status
+              booking.status,
             )}`}
           >
             {booking.status}
@@ -820,7 +966,7 @@ export function BookingsDataGrid() {
       render: (booking) => (
         <span
           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBookingStatusColor(
-            booking.status
+            booking.status,
           )}`}
         >
           {booking.status}
@@ -878,65 +1024,131 @@ export function BookingsDataGrid() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div>
-          <h1
-            className="text-2xl font-bold"
-            style={{ color: "hsl(var(--foreground))" }}
-          >
-            Bookings
-          </h1>
-          <p style={{ color: "hsl(var(--muted-foreground))" }}>
-            Manage rental bookings and schedules
-          </p>
-        </div>
-        <AddBookingForm onBookingAdded={fetchBookings} />
-      </div>
-
-      {/* Filter Controls */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setShowCompletedBookings(!showCompletedBookings)}
-            className={`px-3 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-              showCompletedBookings
-                ? "bg-green-600 hover:bg-green-700 text-white"
-                : "bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300"
-            }`}
-          >
-            <CheckCircle size={16} />
-            <span className="hidden sm:inline">
-              {showCompletedBookings
-                ? "Hide Completed Bookings"
-                : "Load Completed Bookings"}
-            </span>
-            <span className="sm:hidden">
-              {showCompletedBookings ? "Hide Completed" : "Show Completed"}
-            </span>
-          </button>
-
-          <div className="hidden sm:block text-sm text-gray-600 dark:text-gray-400">
-            Showing{" "}
-            {showCompletedBookings ? "Active & Completed" : "Active Only"}{" "}
-            bookings
+      {!isMounted ? (
+        // Show loading skeleton during SSR to prevent hydration mismatch
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div>
+              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-48 mt-2 animate-pulse"></div>
+            </div>
           </div>
+          <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
         </div>
+      ) : (
+        <>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div>
+              <h1
+                className="text-2xl font-bold"
+                style={{ color: "hsl(var(--foreground))" }}
+              >
+                Bookings
+              </h1>
+              <p style={{ color: "hsl(var(--muted-foreground))" }}>
+                Manage rental bookings and schedules
+              </p>
+            </div>
+            <AddBookingForm onBookingAdded={fetchBookings} />
+          </div>
 
-        <div className="text-sm text-gray-500 dark:text-gray-400">
-          Total: {filteredBookings.length} bookings
-        </div>
-      </div>
+          {/* Filter Controls */}
+          <div className="space-y-4">
+            {/* Date Filter Controls */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Date Filter:
+                </span>
+              </div>
 
-      <DataGrid
-        data={filteredBookings}
-        columns={columns}
-        pageSize={50}
-        searchPlaceholder="Search by Booking ID, Customer Name, Product names, Status, or any details..."
-        onSearch={handleSearch}
-        loading={loading}
-        emptyMessage="No bookings found. Create your first booking to get started."
-        renderCard={renderBookingCard}
-      />
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={dateFilter.startDate}
+                  onChange={(e) =>
+                    updateDateFilter(e.target.value, dateFilter.endDate)
+                  }
+                  className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                />
+                <span className="text-gray-500">to</span>
+                <input
+                  type="date"
+                  value={dateFilter.endDate}
+                  onChange={(e) =>
+                    updateDateFilter(dateFilter.startDate, e.target.value)
+                  }
+                  className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={resetDateFilter}
+                  className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                  title="Reset to default (last 1 month to next 12 months)"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </button>
+                <div className="text-xs text-blue-600 dark:text-blue-400">
+                  Showing bookings from{" "}
+                  {safeFormatDate(dateFilter.startDate, "MMM yyyy", isMounted)}{" "}
+                  to {safeFormatDate(dateFilter.endDate, "MMM yyyy", isMounted)}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() =>
+                    setShowCompletedBookings(!showCompletedBookings)
+                  }
+                  className={`px-3 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                    showCompletedBookings
+                      ? "bg-green-600 hover:bg-green-700 text-white"
+                      : "bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300"
+                  }`}
+                >
+                  <CheckCircle size={16} />
+                  <span className="hidden sm:inline">
+                    {showCompletedBookings
+                      ? "Hide Completed Bookings"
+                      : "Load Completed Bookings"}
+                  </span>
+                  <span className="sm:hidden">
+                    {showCompletedBookings
+                      ? "Hide Completed"
+                      : "Show Completed"}
+                  </span>
+                </button>
+
+                <div className="hidden sm:block text-sm text-gray-600 dark:text-gray-400">
+                  Showing{" "}
+                  {showCompletedBookings ? "Active & Completed" : "Active Only"}{" "}
+                  bookings
+                </div>
+              </div>
+
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Total: {filteredBookings.length} bookings
+              </div>
+            </div>
+          </div>
+
+          <DataGrid
+            data={filteredBookings}
+            columns={columns}
+            pageSize={50}
+            searchPlaceholder="Search by Booking ID, Customer Name, Product names, Status, or any details..."
+            onSearch={handleSearch}
+            loading={loading}
+            emptyMessage="No bookings found. Create your first booking to get started."
+            renderCard={renderBookingCard}
+          />
+        </>
+      )}
     </div>
   );
 }

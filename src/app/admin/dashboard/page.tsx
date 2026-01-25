@@ -6,10 +6,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Plus, Users, LogOut, Eye, EyeOff } from "lucide-react";
+import {
+  Shield,
+  Plus,
+  Users,
+  LogOut,
+  Eye,
+  EyeOff,
+  Settings,
+  Edit,
+  Trash2,
+} from "lucide-react";
 import dynamic from "next/dynamic";
 import { useApiClient } from "@/hooks/useApi";
-import { apiPost } from "@/lib/api-client";
+import { apiPost, apiPut } from "@/lib/api-client";
 
 // Helper function to format date consistently for SSR
 const formatDate = (dateString: string) => {
@@ -43,14 +53,14 @@ interface Tenant {
 
 interface ConfigMaster {
   id: number;
-  configKey: string;
   configName: string;
   description: string;
   dataType: string;
   defaultValue: string;
-  isActive: boolean;
+  rowStatusCd: string;
   createdAt: string;
   updatedAt: string;
+  modifiedBy: string;
 }
 
 function AdminDashboard() {
@@ -60,19 +70,26 @@ function AdminDashboard() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [configs, setConfigs] = useState<ConfigMaster[]>([]);
   const [activeTab, setActiveTab] = useState<"users" | "tenants" | "configs">(
-    "users"
+    "users",
   );
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isLoadingTenants, setIsLoadingTenants] = useState(false);
   const [isLoadingConfigs, setIsLoadingConfigs] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreateConfigForm, setShowCreateConfigForm] = useState(false);
+  const [showEditConfigForm, setShowEditConfigForm] = useState(false);
+  const [editingConfig, setEditingConfig] = useState<ConfigMaster | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [formData, setFormData] = useState({
     username: "",
     password: "",
     tenantId: "",
+  });
+  const [configFormData, setConfigFormData] = useState({
+    configName: "",
+    description: "",
   });
   const router = useRouter();
   const apiClient = useApiClient();
@@ -174,7 +191,7 @@ function AdminDashboard() {
       "fetchTenants called, isAuthenticated:",
       isAuthenticated,
       "isLoadingTenants:",
-      isLoadingTenants
+      isLoadingTenants,
     );
     if (isAuthenticated !== true || isLoadingTenants) return;
 
@@ -258,7 +275,7 @@ function AdminDashboard() {
   useEffect(() => {
     console.log(
       "Data fetch useEffect triggered, isAuthenticated:",
-      isAuthenticated
+      isAuthenticated,
     );
     if (isAuthenticated === true) {
       console.log("Starting to fetch data...");
@@ -296,8 +313,118 @@ function AdminDashboard() {
         const data = await response.json();
         setMessage(data.error || "Failed to create user");
       }
-    } catch (error: any) {
+    } catch (error: any) {}
+  };
+
+  const handleCreateConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMessage("");
+
+    if (!configFormData.configName || !configFormData.description) {
+      setMessage("Config name and description are required");
+      return;
     }
+
+    try {
+      const response = await apiPost("/api/admin/configs", {
+        configName: configFormData.configName,
+        description: configFormData.description,
+        modifiedBy: "Admin",
+      });
+
+      if (response.ok) {
+        setMessage("Configuration created successfully!");
+        setConfigFormData({
+          configName: "",
+          description: "",
+        });
+        setShowCreateConfigForm(false);
+        fetchConfigs(); // Refresh configs list
+        setTimeout(() => setMessage(""), 3000);
+      } else {
+        const data = await response.json();
+        setMessage(data.error || "Failed to create configuration");
+      }
+    } catch (error: any) {
+      setMessage("Failed to create configuration");
+    }
+  };
+
+  const handleEditConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMessage("");
+
+    if (
+      !editingConfig ||
+      !configFormData.configName ||
+      !configFormData.description
+    ) {
+      setMessage("Config name and description are required");
+      return;
+    }
+
+    try {
+      const response = await apiPut(`/api/admin/configs/${editingConfig.id}`, {
+        configName: configFormData.configName,
+        description: configFormData.description,
+        modifiedBy: "Admin",
+      });
+
+      if (response.ok) {
+        setMessage("Configuration updated successfully!");
+        setConfigFormData({
+          configName: "",
+          description: "",
+        });
+        setShowEditConfigForm(false);
+        setEditingConfig(null);
+        fetchConfigs(); // Refresh configs list
+        setTimeout(() => setMessage(""), 3000);
+      } else {
+        const data = await response.json();
+        setMessage(data.error || "Failed to update configuration");
+      }
+    } catch (error: any) {
+      setMessage("Failed to update configuration");
+    }
+  };
+
+  const handleDeleteConfig = async (configId: number) => {
+    if (!confirm("Are you sure you want to delete this configuration?")) {
+      return;
+    }
+
+    setMessage("");
+
+    try {
+      const response = await fetch(`/api/admin/configs/${configId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
+      });
+
+      if (response.ok) {
+        setMessage("Configuration deleted successfully!");
+        fetchConfigs(); // Refresh configs list
+        setTimeout(() => setMessage(""), 3000);
+      } else {
+        const data = await response.json();
+        setMessage(data.error || "Failed to delete configuration");
+      }
+    } catch (error: any) {
+      setMessage("Failed to delete configuration");
+    }
+  };
+
+  const openEditConfigForm = (config: ConfigMaster) => {
+    setEditingConfig(config);
+    setConfigFormData({
+      configName: config.configName,
+      description: config.description || "",
+    });
+    setShowEditConfigForm(true);
   };
 
   const handleLogout = async () => {
@@ -536,7 +663,7 @@ function AdminDashboard() {
         )}
 
         {/* Users Table */}
-        <Card>
+        <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
@@ -603,6 +730,241 @@ function AdminDashboard() {
                         </td>
                         <td className="p-3 text-gray-600 dark:text-gray-400">
                           {user.updatedBy}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Create Config Form */}
+        {showCreateConfigForm && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Create New Configuration</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleCreateConfig} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="config-name">Configuration Name</Label>
+                  <Input
+                    id="config-name"
+                    value={configFormData.configName}
+                    onChange={(e) =>
+                      setConfigFormData((prev) => ({
+                        ...prev,
+                        configName: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter configuration name"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="config-description">Description</Label>
+                  <Input
+                    id="config-description"
+                    value={configFormData.description}
+                    onChange={(e) =>
+                      setConfigFormData((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter configuration description"
+                    required
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button type="submit">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Configuration
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowCreateConfigForm(false);
+                      setConfigFormData({
+                        configName: "",
+                        description: "",
+                      });
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Edit Config Form */}
+        {showEditConfigForm && editingConfig && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Edit Configuration</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleEditConfig} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-config-name">Configuration Name</Label>
+                  <Input
+                    id="edit-config-name"
+                    value={configFormData.configName}
+                    onChange={(e) =>
+                      setConfigFormData((prev) => ({
+                        ...prev,
+                        configName: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter configuration name"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-config-description">Description</Label>
+                  <Input
+                    id="edit-config-description"
+                    value={configFormData.description}
+                    onChange={(e) =>
+                      setConfigFormData((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter configuration description"
+                    required
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button type="submit">
+                    <Edit className="h-4 w-4 mr-2" />
+                    Update Configuration
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowEditConfigForm(false);
+                      setEditingConfig(null);
+                      setConfigFormData({
+                        configName: "",
+                        description: "",
+                      });
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Configuration Management Table */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Configuration Management
+              </CardTitle>
+              <Button
+                onClick={() => setShowCreateConfigForm(!showCreateConfigForm)}
+                className="flex items-center gap-2"
+                size="sm"
+              >
+                <Plus className="h-4 w-4" />
+                Add Configuration
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoadingConfigs ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-2 text-gray-600">Loading configurations...</p>
+              </div>
+            ) : configs.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No configurations found. Create the first configuration to get
+                started.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-3 font-medium text-gray-900 dark:text-white">
+                        Name
+                      </th>
+                      <th className="text-left p-3 font-medium text-gray-900 dark:text-white">
+                        Description
+                      </th>
+                      <th className="text-left p-3 font-medium text-gray-900 dark:text-white">
+                        Status
+                      </th>
+                      <th className="text-left p-3 font-medium text-gray-900 dark:text-white">
+                        Modified By
+                      </th>
+                      <th className="text-left p-3 font-medium text-gray-900 dark:text-white">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {configs.map((config) => (
+                      <tr
+                        key={config.id}
+                        className="border-b hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        <td className="p-3 font-medium text-gray-900 dark:text-white">
+                          {config.configName}
+                        </td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">
+                          {config.description}
+                        </td>
+                        <td className="p-3">
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              config.rowStatusCd === "A"
+                                ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+                                : "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"
+                            }`}
+                          >
+                            {config.rowStatusCd === "A" ? "Active" : "Inactive"}
+                          </span>
+                        </td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">
+                          {config.modifiedBy}
+                        </td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openEditConfigForm(config)}
+                              className="p-2"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteConfig(config.id)}
+                              className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}

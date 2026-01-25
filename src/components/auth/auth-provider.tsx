@@ -3,6 +3,7 @@
 import { useState, useEffect, createContext, useContext } from "react";
 import { clearAllCustomersCache } from "@/lib/customers-cache";
 import { clearAllProductsCache } from "@/lib/products-cache";
+import { clearAllConfigurationsCache } from "@/lib/configurations-cache";
 
 interface User {
   id: number;
@@ -93,6 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear all caches when logging out to prevent cross-tenant data leakage
       clearAllCustomersCache();
       clearAllProductsCache();
+      clearAllConfigurationsCache();
       setUser(null);
       // Force a redirect to login after logout
       window.location.href = "/login";
