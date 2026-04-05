@@ -6,12 +6,12 @@ export async function GET(request: NextRequest) {
   return withAuth(request, async (user) => {
     try {
       const { searchParams } = new URL(request.url);
-      const year = searchParams.get('year') || '2025-26';
+      const year = searchParams.get('year') || '2026-27';
 
       // Parse the financial year to get start and end dates
       const [startYear, endYear] = year.split('-');
       
-      // Convert 2-digit year to full year (e.g., "25" -> "2025")
+      // Convert 2-digit year to full year (e.g., "26" -> "2026")
       const fullStartYear = startYear.length === 2 ? `20${startYear}` : startYear;
       const fullEndYear = endYear.length === 2 ? `20${endYear}` : endYear;
       
