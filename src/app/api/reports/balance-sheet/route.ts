@@ -135,6 +135,7 @@ export async function GET(request: NextRequest) {
       monthlyBreakdown,
     };
 
+    
     console.log('Balance sheet calculated:', {
       totalRevenue,
       totalBookings: bookings.length,
