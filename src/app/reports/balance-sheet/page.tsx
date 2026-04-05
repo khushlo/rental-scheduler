@@ -31,6 +31,12 @@ interface BalanceSheetData {
 
 const FINANCIAL_YEARS = [
   {
+    value: "2026-27",
+    label: "2026-27",
+    startDate: "2026-04-01",
+    endDate: "2027-03-31",
+  },
+  {
     value: "2025-26",
     label: "2025-26",
     startDate: "2025-04-01",
@@ -57,7 +63,7 @@ const FINANCIAL_YEARS = [
 ];
 
 export default function BalanceSheetPage() {
-  const [selectedYear, setSelectedYear] = useState("2025-26");
+  const [selectedYear, setSelectedYear] = useState("2026-27");
   const [balanceSheet, setBalanceSheet] = useState<BalanceSheetData | null>(
     null
   );
