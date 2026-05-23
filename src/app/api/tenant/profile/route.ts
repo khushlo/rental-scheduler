@@ -40,8 +40,8 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
-    const { tenantId, name, username, password } = body
-    
+    const { tenantId, name, currentPassword, newPassword, userId } = body
+
     if (!tenantId) {
       return NextResponse.json({ error: 'Tenant ID is required' }, { status: 400 })
     }
@@ -50,37 +50,39 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
-    // Check if username is unique (if provided)
-    if (username && username.trim()) {
-      const existingUser = await prisma.tenant.findFirst({
-        where: {
-          username: username.trim(),
-          id: {
-            not: parseInt(tenantId)
-          }
-        }
-      })
+    // ── Update display name on Tenant ────────────────────────────────────
+    const updateData: any = { name: name.trim(), updatedAt: new Date() }
 
-      if (existingUser) {
-        return NextResponse.json({ error: 'Username already exists' }, { status: 409 })
+    // ── Password change via UserLogin ─────────────────────────────────────
+    if (newPassword) {
+      if (!currentPassword) {
+        return NextResponse.json({ error: 'Current password is required to set a new password' }, { status: 400 })
       }
-    }
+      if (newPassword.length < 6) {
+        return NextResponse.json({ error: 'New password must be at least 6 characters' }, { status: 400 })
+      }
 
-    // Prepare update data
-    const updateData: any = {
-      name: name.trim(),
-      updatedAt: new Date()
-    }
+      // Find the UserLogin record for this tenant
+      const userLoginWhere = userId
+        ? { id: parseInt(userId), tenantId: parseInt(tenantId) }
+        : { tenantId: parseInt(tenantId) }
 
-    // Add username if provided
-    if (username !== undefined) {
-      updateData.username = username.trim() || null
-    }
+      const userLogin = await prisma.userLogin.findFirst({ where: userLoginWhere })
 
-    // Hash password if provided
-    if (password && password.length >= 6) {
-      const saltRounds = 12
-      updateData.password = await bcrypt.hash(password, saltRounds)
+      if (!userLogin) {
+        return NextResponse.json({ error: 'User account not found' }, { status: 404 })
+      }
+
+      const passwordMatch = await bcrypt.compare(currentPassword, userLogin.password)
+      if (!passwordMatch) {
+        return NextResponse.json({ error: 'Current password is incorrect' }, { status: 401 })
+      }
+
+      const hashed = await bcrypt.hash(newPassword, 12)
+      await prisma.userLogin.update({
+        where: { id: userLogin.id },
+        data: { password: hashed, updatedBy: 'Profile', updatedAt: new Date() },
+      })
     }
 
     const updatedTenant = await prisma.tenant.update({

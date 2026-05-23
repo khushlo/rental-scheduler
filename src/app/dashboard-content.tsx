@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useRouter } from "next/navigation";
+import { TourGuide } from "@/components/tour/tour-guide";
 
 interface DashboardStats {
   totalCustomers: number;
@@ -152,6 +153,9 @@ export default function DashboardContent() {
             Manage your rental business efficiently. Schedule bookings, track
             inventory, and avoid conflicts.
           </p>
+          <div className="mt-4 flex justify-center">
+            <TourGuide />
+          </div>
         </div>
 
         {/* Quick Stats */}

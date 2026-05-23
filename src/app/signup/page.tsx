@@ -1,8 +1,7 @@
-import Link from "next/link";
-import { LoginForm } from "@/components/auth/login-form";
+import { SignupForm } from "@/components/auth/signup-form";
 import { RentalSchedulerLogo } from "@/components/auth/rental-scheduler-logo";
 
-export default function LoginPage() {
+export default function SignupPage() {
   return (
     <div className="min-h-screen flex">
       {/* Left brand panel — hidden on mobile */}
@@ -37,7 +36,7 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
-          <div className="flex justify-center mb-4 lg:hidden">
+          <div className="flex justify-center mb-6 lg:hidden">
             <RentalSchedulerLogo size={52} color="#1e3a5f" />
           </div>
           <div className="lg:hidden text-center mb-6">
@@ -48,17 +47,13 @@ export default function LoginPage() {
 
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
             <div className="mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Welcome back</h2>
-              <p className="text-gray-500 text-sm mt-1">Sign in to your account</p>
+              <h2 className="text-xl font-bold text-gray-900">Create your account</h2>
+              <p className="text-gray-500 text-sm mt-1">
+                Start managing your rentals for free
+              </p>
             </div>
-            <LoginForm />
+            <SignupForm />
           </div>
-
-          <p className="text-center mt-4 text-xs text-gray-400">
-            <Link href="/admin/login" className="hover:text-gray-600 underline">
-              Admin Login
-            </Link>
-          </p>
         </div>
       </div>
     </div>

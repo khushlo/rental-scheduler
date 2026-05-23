@@ -88,6 +88,7 @@ export function BookingDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [limitReached, setLimitReached] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Customer state
@@ -598,7 +599,12 @@ export function BookingDialog({
         onClose();
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to ${mode} booking`);
+        if (response.status === 403 && errorData.limitReached) {
+          setLimitReached(true);
+          setError(errorData.error);
+        } else {
+          throw new Error(errorData.error || `Failed to ${mode} booking`);
+        }
       }
     } catch (error: unknown) {
       setError(
@@ -676,7 +682,14 @@ export function BookingDialog({
             onSubmit={handleSubmit}
             className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-y-auto max-h-[calc(95vh-80px)] sm:max-h-[calc(90vh-100px)]"
           >
-            {error && (
+            {limitReached && (
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 px-4 py-3 rounded-lg text-sm">
+                <p className="font-semibold mb-1">🔒 Free Plan Limit Reached</p>
+                <p>{error}</p>
+                <p className="mt-2 text-xs">Contact your administrator to upgrade to a licensed plan.</p>
+              </div>
+            )}
+            {error && !limitReached && (
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg text-sm">
                 {error}
               </div>

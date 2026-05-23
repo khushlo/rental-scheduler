@@ -252,7 +252,35 @@ export async function POST(request: NextRequest) {
       else if (body.eventDate === '') body.eventDate = null
       
       const validatedData = BookingSchema.parse(body)
-      
+
+      // ── Booking limit check for unlicensed (free) tenants ───────────────
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: user.tenantId },
+        select: { isLicensed: true },
+      })
+
+      if (tenant && !tenant.isLicensed) {
+        const bookingLimit = parseInt(process.env.SIGNUP_BOOKING_LIMIT ?? '10', 10)
+        const bookingCount = await prisma.booking.count({
+          where: {
+            tenantId: user.tenantId,
+            rowStatusCd: { not: 'D' }, // exclude deleted
+          },
+        })
+        if (bookingCount >= bookingLimit) {
+          return NextResponse.json(
+            {
+              error: `You have reached your free plan limit of ${bookingLimit} bookings. Please upgrade to a licensed plan for unlimited bookings.`,
+              limitReached: true,
+              limit: bookingLimit,
+              current: bookingCount,
+            },
+            { status: 403 }
+          )
+        }
+      }
+      // ────────────────────────────────────────────────────────────────────
+
       // Check for conflicts with all products in the booking (improved quantity-aware detection)
       for (const item of validatedData.items) {
         // Get product to check available quantity - ensure it belongs to the user's tenant

@@ -30,7 +30,7 @@ interface TenantProfile {
 
 interface ProfileFormData {
   name: string;
-  username: string;
+  currentPassword: string;
   password: string;
   confirmPassword: string;
 }
@@ -42,7 +42,7 @@ function ProfileDrawerComponent() {
   const [profile, setProfile] = useState<TenantProfile | null>(null);
   const [formData, setFormData] = useState<ProfileFormData>({
     name: "",
-    username: "",
+    currentPassword: "",
     password: "",
     confirmPassword: "",
   });
@@ -87,7 +87,7 @@ function ProfileDrawerComponent() {
         setProfile(data);
         setFormData({
           name: data.name || "",
-          username: data.username || "",
+          currentPassword: "",
           password: "",
           confirmPassword: "",
         });
@@ -110,19 +110,15 @@ function ProfileDrawerComponent() {
     if (!formData.name.trim()) {
       return "Name is required";
     }
-
-    if (formData.username && formData.username.length < 3) {
-      return "Username must be at least 3 characters";
+    if (formData.password && !formData.currentPassword) {
+      return "Current password is required to set a new password";
     }
-
     if (formData.password && formData.password !== formData.confirmPassword) {
       return "Passwords do not match";
     }
-
     if (formData.password && formData.password.length < 6) {
-      return "Password must be at least 6 characters";
+      return "New password must be at least 6 characters";
     }
-
     return null;
   };
 
@@ -138,18 +134,14 @@ function ProfileDrawerComponent() {
       setMessage("");
 
       const updateData: any = {
-        tenantId: user?.tenantId, // Use authenticated user's tenant ID
+        tenantId: user?.tenantId,
+        userId: user?.id,
         name: formData.name,
       };
 
-      // Only include username if it's provided
-      if (formData.username.trim()) {
-        updateData.username = formData.username;
-      }
-
-      // Only include password if it's provided
       if (formData.password) {
-        updateData.password = formData.password;
+        updateData.currentPassword = formData.currentPassword;
+        updateData.newPassword = formData.password;
       }
 
       const response = await apiPut("/api/tenant/profile", updateData);
@@ -158,7 +150,7 @@ function ProfileDrawerComponent() {
         const updatedProfile = await response.json();
         setProfile(updatedProfile.tenant);
         setMessage("Profile updated successfully!");
-        setFormData((prev) => ({ ...prev, password: "", confirmPassword: "" }));
+        setFormData((prev) => ({ ...prev, currentPassword: "", password: "", confirmPassword: "" }));
         setShowPasswordSection(false);
 
         // Close drawer after 2 seconds
@@ -288,12 +280,12 @@ function ProfileDrawerComponent() {
                 </div>
               </div>
 
-              {/* Credentials Section */}
+              {/* Change Password Section */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-medium flex items-center gap-2">
                     <Lock className="h-4 w-4" />
-                    Credentials
+                    Change Password
                   </h3>
                   {!showPasswordSection && (
                     <Button
@@ -307,21 +299,21 @@ function ProfileDrawerComponent() {
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    value={formData.username}
-                    onChange={(e) =>
-                      handleInputChange("username", e.target.value)
-                    }
-                    placeholder="Enter username"
-                    disabled={!showPasswordSection}
-                  />
-                </div>
-
                 {showPasswordSection && (
                   <>
+                    <div className="space-y-2">
+                      <Label htmlFor="currentPassword">Current Password</Label>
+                      <Input
+                        id="currentPassword"
+                        type="password"
+                        value={formData.currentPassword}
+                        onChange={(e) =>
+                          handleInputChange("currentPassword", e.target.value)
+                        }
+                        placeholder="Enter current password"
+                      />
+                    </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="password">New Password</Label>
                       <Input
@@ -331,12 +323,12 @@ function ProfileDrawerComponent() {
                         onChange={(e) =>
                           handleInputChange("password", e.target.value)
                         }
-                        placeholder="Enter new password"
+                        placeholder="Enter new password (min 6 characters)"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">Confirm Password</Label>
+                      <Label htmlFor="confirmPassword">Confirm New Password</Label>
                       <Input
                         id="confirmPassword"
                         type="password"
@@ -355,6 +347,7 @@ function ProfileDrawerComponent() {
                         setShowPasswordSection(false);
                         setFormData((prev) => ({
                           ...prev,
+                          currentPassword: "",
                           password: "",
                           confirmPassword: "",
                         }));

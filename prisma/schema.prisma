@@ -37,6 +37,10 @@ model Tenant {
   businessLicense String?
   taxNumber       String?
   bankDetails     Json?
+
+  // Licensing & signup
+  isLicensed    Boolean  @default(false)  @map("is_licensed")
+  signupSource  String?  @default("admin") @map("signup_source") // "admin" | "signup"
   
   bookings  Booking[]
   customers Customer[]

@@ -20,6 +20,7 @@ const ADMIN_PUBLIC_PATHS = [
 const API_PATHS_NO_AUTH = [
   '/api/auth/login',
   '/api/auth/logout',
+  '/api/auth/signup',
   '/api/admin/auth/login',
   '/api/admin/auth/logout',
   '/api/admin/auth/verify',

@@ -2,15 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/components/auth/auth-provider";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 export function LoginForm() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -23,14 +22,12 @@ export function LoginForm() {
 
     try {
       const success = await login(username, password);
-
       if (success) {
-        // Login successful - redirect to dashboard
         router.push("/");
       } else {
-        setError("Login failed. Please check your credentials.");
+        setError("Invalid username or password. Please try again.");
       }
-    } catch (err) {
+    } catch {
       setError("Network error. Please try again.");
     } finally {
       setIsLoading(false);
@@ -38,51 +35,78 @@ export function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto shadow-lg">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-center text-lg md:text-xl">
-          Sign In
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              disabled={isLoading}
-              placeholder="Enter your username"
-            />
-          </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Username */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Username
+        </label>
+        <input
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+          disabled={isLoading}
+          placeholder="Enter your username"
+          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent disabled:opacity-50 text-sm"
+        />
+      </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={isLoading}
-              placeholder="Enter your password"
-            />
-          </div>
+      {/* Password */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Password
+        </label>
+        <div className="relative">
+          <input
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            disabled={isLoading}
+            placeholder="Enter your password"
+            className="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent disabled:opacity-50 text-sm"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            tabIndex={-1}
+          >
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        </div>
+      </div>
 
-          {error && (
-            <div className="text-red-600 text-sm text-center bg-red-50 p-2 rounded">
-              {error}
-            </div>
-          )}
+      {/* Error */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Signing In..." : "Sign In"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+      {/* Submit */}
+      <button
+        type="submit"
+        disabled={isLoading || !username || !password}
+        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#1e3a5f] hover:bg-[#152d4a] disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors text-sm"
+      >
+        {isLoading ? (
+          <>
+            <Loader2 size={16} className="animate-spin" />
+            Signing in...
+          </>
+        ) : (
+          "Sign In"
+        )}
+      </button>
+
+      <p className="text-center text-sm text-gray-600">
+        Don&apos;t have an account?{" "}
+        <Link href="/signup" className="text-[#1e3a5f] hover:underline font-medium">
+          Sign up free
+        </Link>
+      </p>
+    </form>
   );
 }
