@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, X, UserPlus, Check } from "lucide-react";
 import { clearCustomersCache } from "@/lib/customers-cache";
 import { useApiMutation } from "@/hooks/useApi";
+import { saveContactAsVCard } from "@/lib/utils";
 
 interface AddCustomerFormProps {
   onCustomerAdded: () => void;
@@ -11,6 +12,7 @@ interface AddCustomerFormProps {
 
 export function AddCustomerForm({ onCustomerAdded }: AddCustomerFormProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [savedCustomer, setSavedCustomer] = useState<{ name: string; phone1: string; phone2?: string; address?: string } | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     phone1: "",
@@ -29,7 +31,7 @@ export function AddCustomerForm({ onCustomerAdded }: AddCustomerFormProps) {
     e.preventDefault();
 
     try {
-      await createCustomer("/api/customers", {
+      const created = await createCustomer("/api/customers", {
         name: formData.name.trim(),
         phone1: formData.phone1.trim(),
         phone2: formData.phone2.trim() || undefined,
@@ -39,6 +41,15 @@ export function AddCustomerForm({ onCustomerAdded }: AddCustomerFormProps) {
 
       // Clear customers cache since a new customer was created
       clearCustomersCache();
+
+      // Store created customer so we can offer saving to contacts
+      setSavedCustomer({
+        name: formData.name.trim(),
+        phone1: formData.phone1.trim(),
+        phone2: formData.phone2.trim() || undefined,
+        address: formData.address.trim() || undefined,
+      });
+
       setFormData({
         name: "",
         phone1: "",
@@ -46,7 +57,7 @@ export function AddCustomerForm({ onCustomerAdded }: AddCustomerFormProps) {
         address: "",
         notes: "",
       });
-      setIsOpen(false);
+
       onCustomerAdded();
     } catch (error) {
       console.error("Error creating customer:", error);
@@ -67,6 +78,7 @@ export function AddCustomerForm({ onCustomerAdded }: AddCustomerFormProps) {
   const handleClose = () => {
     if (!isSubmitting) {
       setIsOpen(false);
+      setSavedCustomer(null);
       setFormData({
         name: "",
         phone1: "",
@@ -90,6 +102,47 @@ export function AddCustomerForm({ onCustomerAdded }: AddCustomerFormProps) {
       {isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+
+            {/* ── Save Contact prompt (shown after successful creation) ── */}
+            {savedCustomer ? (
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
+                    <Check className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">Customer created!</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Save <span className="font-medium">Client {savedCustomer.name}</span> to your phone contacts?</p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-5">
+                  Saving the contact lets WhatsApp recognise this customer automatically when you share invoices.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      saveContactAsVCard(savedCustomer);
+                      setSavedCustomer(null);
+                      setIsOpen(false);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
+                  >
+                    <UserPlus size={16} />
+                    Save Contact
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSavedCustomer(null);
+                      setIsOpen(false);
+                    }}
+                    className="px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                  >
+                    Skip
+                  </button>
+                </div>
+              </div>
+            ) : (
+            <>
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                 Add New Customer
@@ -229,6 +282,8 @@ export function AddCustomerForm({ onCustomerAdded }: AddCustomerFormProps) {
                 </button>
               </div>
             </form>
+            </>
+            )}
           </div>
         </div>
       )}

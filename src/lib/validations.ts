@@ -34,9 +34,9 @@ export const CustomerSchema = z.object({
   id: OptionalIdSchema,
   name: z.string().min(1, "Customer name is required"),
   phone1: z.string().min(1, "Primary phone number is required"),
-  phone2: z.string().optional(),
-  address: z.string().optional(),
-  notes: z.string().optional(),
+  phone2: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
   tenantId: TenantIdSchema.optional(), // Optional for validation, will be set by API
 })
 

@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { X, UserPlus, Check } from "lucide-react";
 import { clearCustomersCache } from "@/lib/customers-cache";
 import { apiPost } from "@/lib/api-client";
+import { saveContactAsVCard } from "@/lib/utils";
 
 interface AddCustomerFormProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export function AddCustomerForm({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [savedCustomer, setSavedCustomer] = useState<{ name: string; phone1: string; phone2?: string; address?: string } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,15 +47,16 @@ export function AddCustomerForm({
         const newCustomer = await response.json();
         // Clear customers cache since a new customer was created
         clearCustomersCache();
-        setFormData({
-          name: "",
-          phone1: "",
-          phone2: "",
-          address: "",
-          notes: "",
+        // Store for the Save Contact prompt
+        setSavedCustomer({
+          name: formData.name.trim(),
+          phone1: formData.phone1.trim(),
+          phone2: formData.phone2.trim() || undefined,
+          address: formData.address.trim() || undefined,
         });
+        setFormData({ name: "", phone1: "", phone2: "", address: "", notes: "" });
         onCustomerAdded(newCustomer);
-        onClose();
+        // Don't call onClose() here — we show the Save Contact prompt first
       } else {
         const errorData = await response.json();
         setError(errorData.error || "Failed to create customer");
@@ -68,6 +71,7 @@ export function AddCustomerForm({
 
   const handleClose = () => {
     setError(null);
+    setSavedCustomer(null);
     setFormData({ name: "", phone1: "", phone2: "", address: "", notes: "" });
     onClose();
   };
@@ -86,6 +90,48 @@ export function AddCustomerForm({
         className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* ── Save Contact prompt (shown after successful creation) ── */}
+        {savedCustomer ? (
+          <div className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
+                <Check className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900 dark:text-gray-100">Customer created!</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Save <span className="font-medium">Client {savedCustomer.name}</span> to your phone contacts?
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-5">
+              Saving the contact lets WhatsApp recognise this customer automatically when you share invoices.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  saveContactAsVCard(savedCustomer);
+                  setSavedCustomer(null);
+                  onClose();
+                }}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                <UserPlus size={16} />
+                Save Contact
+              </button>
+              <button
+                onClick={() => {
+                  setSavedCustomer(null);
+                  onClose();
+                }}
+                className="px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+              >
+                Skip
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-600">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             Add New Customer
@@ -211,6 +257,8 @@ export function AddCustomerForm({
             </button>
           </div>
         </form>
+        </>
+        )}
       </div>
     </div>,
     document.body

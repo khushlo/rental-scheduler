@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
+import { UserPlus } from "lucide-react";
 import { DataGrid, Column } from "@/components/ui/data-grid";
 import { AddCustomerForm } from "./add-customer-form";
 import { EditCustomerForm } from "./edit-customer-form";
 import { DeleteCustomerButton } from "./delete-customer-button";
 import { fetchCustomersGlobal, clearCustomersCache } from '@/lib/customers-cache';
-import { formatId } from "@/lib/utils";
+import { formatId, saveContactAsVCard } from "@/lib/utils";
 
 interface Customer {
   id: number;
@@ -171,6 +172,20 @@ export function CustomersDataGrid() {
       width: "1/8",
       render: (customer) => (
         <div className="flex items-center space-x-2">
+          <button
+            onClick={() =>
+              saveContactAsVCard({
+                name: customer.name,
+                phone1: customer.phone1,
+                phone2: customer.phone2,
+                address: customer.address,
+              })
+            }
+            title="Save to Phone Contacts"
+            className="p-1.5 text-green-600 hover:text-green-800 hover:bg-green-50 dark:hover:bg-green-900/20 rounded transition-colors"
+          >
+            <UserPlus size={16} />
+          </button>
           <EditCustomerForm
             customer={customer}
             onCustomerUpdated={handleCustomerUpdated}

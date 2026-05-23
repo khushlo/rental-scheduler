@@ -218,3 +218,44 @@ export function checkTimeOverlap(
   // Two periods overlap if: start1 < end2 AND start2 < end1
   return start1 < end2 && start2 < end1;
 }
+
+// ─── vCard / Save Contact ────────────────────────────────────────────────────
+export interface ContactData {
+  name: string;
+  phone1: string;
+  phone2?: string;
+  address?: string;
+}
+
+/**
+ * Generates and triggers download of a .vcf (vCard) file.
+ * The contact is saved with a "Client " prefix so all rental clients
+ * appear together when searching in the device Contacts app.
+ */
+export function saveContactAsVCard(contact: ContactData): void {
+  const displayName = `Client ${contact.name}`;
+  // N field: Lastname;Firstname;Additional;Prefix;Suffix
+  const nField = `N:${contact.name};;;Client;`;
+
+  let vcard = `BEGIN:VCARD\r\nVERSION:3.0\r\nFN:${displayName}\r\n${nField}\r\n`;
+  vcard += `TEL;TYPE=CELL,VOICE:${contact.phone1}\r\n`;
+  if (contact.phone2) {
+    vcard += `TEL;TYPE=CELL,VOICE:${contact.phone2}\r\n`;
+  }
+  if (contact.address) {
+    // ADR: pobox;ext;street;city;state;zip;country  — put full address in street field
+    vcard += `ADR;TYPE=HOME:;;${contact.address};;;;\r\n`;
+  }
+  vcard += `NOTE:Rental Client\r\n`;
+  vcard += `END:VCARD`;
+
+  const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${displayName.replace(/\s+/g, '_')}.vcf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
