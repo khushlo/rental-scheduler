@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "next build",
     "build:prod": "next build",
     "start": "next start -p ${PORT:-3000}",
     "lint": "eslint",
@@ -15,7 +15,7 @@
     "db:reseed": "tsx prisma/reseed.ts",
     "db:reset": "prisma db push --force-reset && npm run db:seed",
     "db:studio": "prisma studio",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate && prisma migrate deploy"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
